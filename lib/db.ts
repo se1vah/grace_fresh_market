@@ -279,7 +279,7 @@ export async function initShopDb(): Promise<void> {
     } catch (err) {
       // Column may already be FLOAT, ignore error
     }
-    console.log("::::")
+
     // Ensure user_addresses table exists
     const createUserAddressesTableQuery = `
       CREATE TABLE IF NOT EXISTS user_addresses (
