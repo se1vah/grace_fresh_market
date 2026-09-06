@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Quicksand, Nunito_Sans } from "next/font/google";
+import { SocketProvider } from "@/components/providers/SocketProvider";
 import "./globals.css";
 
 const quicksand = Quicksand({
@@ -35,9 +36,8 @@ export default function RootLayout({
       className={`${quicksand.variable} ${nunitoSans.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col font-sans bg-[#F9FBF9] text-[#1E2922]">
-        {children}
+        <SocketProvider>{children}</SocketProvider>
       </body>
     </html>
   );
 }
-

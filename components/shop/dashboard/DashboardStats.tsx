@@ -1,20 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Layers,
   CheckCircle2,
   XCircle,
-  Plus,
   ArrowRight,
   Loader2,
   RefreshCw,
   FolderTree,
   TrendingUp,
   Sparkles,
-  BarChart3,
-  ChevronRight,
   PieChart
 } from 'lucide-react';
 
@@ -32,7 +29,7 @@ export default function DashboardStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +52,7 @@ export default function DashboardStats() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStats();

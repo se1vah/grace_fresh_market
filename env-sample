@@ -5,5 +5,9 @@ DB_USER=root
 DB_PASSWORD=<PASSWORD>
 DB_NAME=<DB_NAME>
 
+# Socket.IO Server
+SOCKET_SERVER_URL=http://localhost:4000
+NEXT_PUBLIC_SOCKET_SERVER_URL=http://localhost:4000
+
 # JWT Configuration
 JWT_SECRET=<JWT_SECRET>
