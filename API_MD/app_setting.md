@@ -6,7 +6,7 @@ This document details the **App Setting API endpoints** used in the Grace Fresh 
 
 ## 1. GET `/api/shop/app-setting`
 
-Retrieves the current application contact settings.
+Retrieves the current application contact settings and optional delivery fee.
 
 ### Request Details
 - **HTTP Method**: `GET`
@@ -29,6 +29,7 @@ Accept: application/json
     "id": 1,
     "email": "info@gracefreshmarket.com",
     "phoneNumber": "+1 (800) 555-0199",
+    "deliveryFee": 40,
     "created_at": "2026-09-01T17:55:00.000Z",
     "updated_at": "2026-09-01T17:55:00.000Z"
   }
@@ -39,7 +40,7 @@ Accept: application/json
 
 ## 2. PUT `/api/shop/app-setting`
 
-Updates the application contact email and phone number. *(Note: `POST` is also supported as an alias).*
+Updates the application contact email, phone number, and optional delivery fee. *(Note: `POST` is also supported as an alias).*
 
 ### Request Details
 - **HTTP Method**: `PUT` or `POST`
@@ -52,13 +53,15 @@ Updates the application contact email and phone number. *(Note: `POST` is also s
 | :--- | :--- | :--- | :--- |
 | `email` | `string` | **Yes** | Valid contact email address. |
 | `phone_number` | `string` | **Yes** | Contact phone number (also accepts `phoneNumber`). |
+| `delivery_fee` | `number` or `string` | No | Optional delivery fee in Indian rupees (also accepts `deliveryFee`). Blank or omitted stores `null`; valid values are ₹0–₹100,000 with up to two decimal places. |
 
 ### Example Request Body
 
 ```json
 {
   "email": "support@gracefreshmarket.com",
-  "phone_number": "+1 (800) 123-4567"
+  "phone_number": "+1 (800) 123-4567",
+  "delivery_fee": 40.5
 }
 ```
 
@@ -72,6 +75,7 @@ Updates the application contact email and phone number. *(Note: `POST` is also s
     "id": 1,
     "email": "support@gracefreshmarket.com",
     "phoneNumber": "+1 (800) 123-4567",
+    "deliveryFee": 40.5,
     "updated_at": "2026-09-01T17:56:00.000Z"
   }
 }

@@ -73,7 +73,8 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
   "cartSummary": {
     "totalItems": 2,
     "itemCount": 1,
-    "totalAmount": 99.98
+    "totalAmount": 99.98,
+    "deliveryFee": 40
   }
 }
 ```
@@ -138,7 +139,8 @@ Retrieves all active items in the specified user's shopping cart along with item
   "cartSummary": {
     "totalItems": 2,
     "itemCount": 1,
-    "totalAmount": 99.98
+    "totalAmount": 99.98,
+    "deliveryFee": 40
   }
 }
 ```

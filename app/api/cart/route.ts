@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 
+async function fetchDeliveryFee(): Promise<number | null> {
+  const settingsRows = await query<{ delivery_fee: unknown }[]>(
+    'SELECT delivery_fee FROM app_settings ORDER BY id DESC LIMIT 1',
+  );
+  const storedFee = settingsRows[0]?.delivery_fee;
+  if (storedFee === null || storedFee === undefined) {
+    return null;
+  }
+
+  const fee = Number(storedFee);
+
+  return Number.isFinite(fee) ? Number(fee.toFixed(2)) : null;
+}
+
 // Helper to fetch complete cart items & summary for a user
 async function fetchUserCart(userId: number) {
+  const deliveryFee = await fetchDeliveryFee();
+
   // Fetch cart items joined with subcategories and categories
   const cartRows = await query<any[]>(
     `SELECT 
@@ -36,6 +52,7 @@ async function fetchUserCart(userId: number) {
         totalItems: 0,
         itemCount: 0,
         totalAmount: 0,
+        deliveryFee,
       },
     };
   }
@@ -107,6 +124,7 @@ async function fetchUserCart(userId: number) {
       totalItems,
       itemCount: formattedItems.length,
       totalAmount: Number(totalAmount.toFixed(2)),
+      deliveryFee,
     },
   };
 }

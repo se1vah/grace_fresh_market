@@ -317,18 +317,54 @@ export async function initShopDb(): Promise<void> {
       // Ignore if unable to modify enum
     }
 
+    // Ensure payment methods are persisted rather than hard-coded by checkout APIs.
+    const createPaymentMethodTableQuery = `
+      CREATE TABLE IF NOT EXISTS PaymentMethod (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          paymentType VARCHAR(100) NOT NULL,
+          description TEXT NOT NULL,
+          createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uk_payment_method_type (paymentType)
+      );
+    `;
+
+    await activePool.query(createPaymentMethodTableQuery);
+
+    // Seed COD once. The unique payment type also protects against duplicate data
+    // when more than one process initializes the database at the same time.
+    await activePool.query(
+      `INSERT INTO PaymentMethod (paymentType, description)
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE paymentType = VALUES(paymentType)`,
+      [
+        'COD',
+        "Pay when your fresh produce arrives at your door. We accept exact cash or card via our driver's terminal.",
+      ]
+    );
+
     // Ensure app_settings table exists
     const createAppSettingsTableQuery = `
       CREATE TABLE IF NOT EXISTS app_settings (
           id INT AUTO_INCREMENT PRIMARY KEY,
           email VARCHAR(255) NOT NULL DEFAULT '',
           phone_number VARCHAR(50) NOT NULL DEFAULT '',
+          delivery_fee DECIMAL(10,2) NULL DEFAULT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
     `;
 
     await activePool.query(createAppSettingsTableQuery);
+
+    // Migration for app_settings tables created before delivery_fee was added.
+    try {
+      await activePool.query(
+        'ALTER TABLE app_settings ADD COLUMN delivery_fee DECIMAL(10,2) NULL DEFAULT NULL;'
+      );
+    } catch {
+      // The column already exists on newer installations.
+    }
 
     // Seed default initial app_settings if empty
     try {

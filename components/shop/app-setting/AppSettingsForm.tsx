@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  X
+  X,
+  IndianRupee,
 } from 'lucide-react';
 
 interface AppSettingsData {
@@ -17,6 +18,8 @@ interface AppSettingsData {
   email: string;
   phone_number: string;
   phoneNumber?: string;
+  delivery_fee?: number | string | null;
+  deliveryFee?: number | string | null;
   updated_at?: string;
 }
 
@@ -24,12 +27,14 @@ export default function AppSettingsForm() {
   const [initialData, setInitialData] = useState<AppSettingsData | null>(null);
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [deliveryFeeError, setDeliveryFeeError] = useState<string | null>(null);
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -49,10 +54,16 @@ export default function AppSettingsForm() {
       if (data.success && data.data) {
         const fetchedEmail = data.data.email || '';
         const fetchedPhone = data.data.phone_number || data.data.phoneNumber || '';
+        const fetchedDeliveryFee = data.data.delivery_fee ?? data.data.deliveryFee;
 
         setInitialData(data.data);
         setEmail(fetchedEmail);
         setPhoneNumber(fetchedPhone);
+        setDeliveryFee(
+          fetchedDeliveryFee === null || fetchedDeliveryFee === undefined
+            ? ''
+            : String(fetchedDeliveryFee),
+        );
       }
     } catch (err: any) {
       console.error('Error fetching app settings:', err);
@@ -66,15 +77,35 @@ export default function AppSettingsForm() {
     fetchSettings();
   }, [fetchSettings]);
 
+  const getDeliveryFeeValidationError = (value: string): string | null => {
+    const cleanValue = value.trim();
+    if (!cleanValue) {
+      return null;
+    }
+
+    if (!/^\d+(?:\.\d{1,2})?$/.test(cleanValue)) {
+      return 'Use only digits and an optional decimal point (up to two decimal places).';
+    }
+
+    const feeAmount = Number(cleanValue);
+    if (!Number.isFinite(feeAmount) || feeAmount > 100000) {
+      return 'Enter an amount from ₹0 to ₹100,000.';
+    }
+
+    return null;
+  };
+
   // Client-side validation
   const validateForm = (): boolean => {
     let isValid = true;
     setEmailError(null);
     setPhoneError(null);
+    setDeliveryFeeError(null);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanEmail = email.trim();
     const cleanPhone = phoneNumber.trim();
+    const cleanDeliveryFee = deliveryFee.trim();
 
     if (!cleanEmail) {
       setEmailError('Email address is required.');
@@ -86,6 +117,12 @@ export default function AppSettingsForm() {
 
     if (!cleanPhone) {
       setPhoneError('Phone number is required.');
+      isValid = false;
+    }
+
+    const feeValidationError = getDeliveryFeeValidationError(cleanDeliveryFee);
+    if (feeValidationError) {
+      setDeliveryFeeError(feeValidationError);
       isValid = false;
     }
 
@@ -112,6 +149,7 @@ export default function AppSettingsForm() {
         body: JSON.stringify({
           email: email.trim(),
           phone_number: phoneNumber.trim(),
+          delivery_fee: deliveryFee.trim(),
         }),
       });
 
@@ -126,6 +164,12 @@ export default function AppSettingsForm() {
         setInitialData(data.data);
         setEmail(data.data.email);
         setPhoneNumber(data.data.phone_number || data.data.phoneNumber || '');
+        const savedDeliveryFee = data.data.delivery_fee ?? data.data.deliveryFee;
+        setDeliveryFee(
+          savedDeliveryFee === null || savedDeliveryFee === undefined
+            ? ''
+            : String(savedDeliveryFee),
+        );
       }
 
       // Auto dismiss toast message after 4 seconds
@@ -145,8 +189,15 @@ export default function AppSettingsForm() {
     if (initialData) {
       setEmail(initialData.email || '');
       setPhoneNumber(initialData.phone_number || initialData.phoneNumber || '');
+      const initialDeliveryFee = initialData.delivery_fee ?? initialData.deliveryFee;
+      setDeliveryFee(
+        initialDeliveryFee === null || initialDeliveryFee === undefined
+          ? ''
+          : String(initialDeliveryFee),
+      );
       setEmailError(null);
       setPhoneError(null);
+      setDeliveryFeeError(null);
       setServerError(null);
       setToastMessage(null);
     }
@@ -154,7 +205,8 @@ export default function AppSettingsForm() {
 
   const isFormDirty = initialData
     ? email.trim() !== (initialData.email || '') ||
-    phoneNumber.trim() !== (initialData.phone_number || initialData.phoneNumber || '')
+    phoneNumber.trim() !== (initialData.phone_number || initialData.phoneNumber || '') ||
+    deliveryFee.trim() !== String(initialData.delivery_fee ?? initialData.deliveryFee ?? '')
     : false;
 
   return (
@@ -216,7 +268,7 @@ export default function AppSettingsForm() {
             </h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form noValidate onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Global Server Error Banner */}
             {serverError && (
               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -300,6 +352,53 @@ export default function AppSettingsForm() {
                 ) : (
                   <p className="text-[12px] text-gray-500">
                     Primary helpline number displayed in the mobile application.
+                  </p>
+                )}
+              </div>
+
+              {/* Field 3: Optional Delivery Fee */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="delivery-fee"
+                  className="block font-quicksand font-bold text-sm text-gray-700"
+                >
+                  Delivery Fee <span className="text-gray-400 font-medium">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <IndianRupee className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="delivery-fee"
+                    type="text"
+                    inputMode="decimal"
+                    value={deliveryFee}
+                    aria-invalid={Boolean(deliveryFeeError)}
+                    aria-describedby={deliveryFeeError ? 'delivery-fee-error' : 'delivery-fee-help'}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setDeliveryFee(nextValue);
+                      setDeliveryFeeError(getDeliveryFeeValidationError(nextValue));
+                    }}
+                    placeholder="e.g. 40.00"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${deliveryFeeError
+                      ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
+                      : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
+                      }`}
+                  />
+                </div>
+                {deliveryFeeError ? (
+                  <div
+                    id="delivery-fee-error"
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 animate-in fade-in slide-in-from-top-1 duration-200"
+                  >
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{deliveryFeeError}</span>
+                  </div>
+                ) : (
+                  <p id="delivery-fee-help" className="text-[12px] text-gray-500">
+                    Leave empty when no delivery fee is configured. Maximum ₹100,000.
                   </p>
                 )}
               </div>
