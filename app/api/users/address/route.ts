@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all user addresses
     const rows = await query<any[]>(
-      'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id DESC',
+      'SELECT * FROM user_addresses WHERE user_id = ?',
       [userId]
     );
 
