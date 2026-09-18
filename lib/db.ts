@@ -240,6 +240,7 @@ export async function initShopDb(): Promise<void> {
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
           token TEXT NOT NULL,
+          fcmToken TEXT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           INDEX idx_user_id (user_id),
           CONSTRAINT fk_user_login_user
@@ -249,6 +250,13 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createUserLoginTableQuery);
+
+    // Migration for existing userLogin table without fcmToken column
+    try {
+      await activePool.query(`ALTER TABLE userLogin ADD COLUMN fcmToken TEXT NULL;`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
 
     // Ensure cart table exists
     const createCartTableQuery = `
