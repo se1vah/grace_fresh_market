@@ -22,6 +22,7 @@ Creates a new user record, generates a JWT authentication token, and persists th
 | `email` | `string` | Yes | Unique valid email address for the user. |
 | `phoneNumber` | `string` | Yes | Phone number of the user. |
 | `password` | `string` | Yes | Password for the account (minimum 6 characters). |
+| `fcmToken` | `string` | No | Optional Firebase Cloud Messaging (FCM) device token for push notifications (also accepts `fcm_token`). Saved into `userLogin` table. |
 
 ### Example Request Body
 
@@ -30,7 +31,8 @@ Creates a new user record, generates a JWT authentication token, and persists th
   "fullName": "Jane Doe",
   "email": "jane.doe@example.com",
   "phoneNumber": "+1234567890",
-  "password": "SecretPassword123"
+  "password": "SecretPassword123",
+  "fcmToken": "dwhUL5LQ0uuWwqcDOX2R2c:APA91bG2s-s3jWQomdeqiys5W0ZuaOALtMKZL1SOv..."
 }
 ```
 
@@ -54,7 +56,7 @@ Creates a new user record, generates a JWT authentication token, and persists th
 
 ## 2. POST `/api/users/login`
 
-Authenticates an existing user with email and password, generates a new JWT token, and records the token entry in `userLogin`.
+Authenticates an existing user with email and password, generates a new JWT token, and records the token entry along with `fcmToken` in `userLogin`.
 
 ### Request Details
 - **HTTP Method**: `POST`
@@ -68,13 +70,15 @@ Authenticates an existing user with email and password, generates a new JWT toke
 | :--- | :--- | :--- | :--- |
 | `email` | `string` | Yes | User's registered email address. |
 | `password` | `string` | Yes | User's password. |
+| `fcmToken` | `string` | No | Optional Firebase Cloud Messaging (FCM) device token for push notifications (also accepts `fcm_token`). Saved into `userLogin` table. |
 
 ### Example Request Body
 
 ```json
 {
   "email": "jane.doe@example.com",
-  "password": "SecretPassword123"
+  "password": "SecretPassword123",
+  "fcmToken": "dwhUL5LQ0uuWwqcDOX2R2c:APA91bG2s-s3jWQomdeqiys5W0ZuaOALtMKZL1SOv..."
 }
 ```
 
@@ -218,4 +222,4 @@ When a database connection or server error occurs:
 ## Database Impact
 
 - **`users` table**: Stores `id`, `fullName`, `email`, `phoneNumber`, hashed `password`, `created_at`, `updated_at`.
-- **`userLogin` table**: Stores `id`, `user_id` (foreign key to `users.id`), `token` (JWT string), `created_at`. Every successful registration or login inserts a new active session token record into `userLogin`. On logout, the token is deleted from `userLogin`.
+- **`userLogin` table**: Stores `id`, `user_id` (foreign key to `users.id`), `token` (JWT string), `fcmToken` (Firebase Cloud Messaging push notification device token), and `created_at`. Every successful registration or login inserts a new active session record into `userLogin` along with the provided `fcmToken`. On logout, the token session is deleted from `userLogin`.
