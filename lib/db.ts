@@ -49,6 +49,7 @@ export async function initShopDb(): Promise<void> {
           email VARCHAR(255) NOT NULL UNIQUE,
           password VARCHAR(255) NOT NULL,
           isSuperAdmin BOOLEAN NOT NULL DEFAULT FALSE,
+          fcmToken TEXT NULL,
           createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
               ON UPDATE CURRENT_TIMESTAMP
@@ -56,6 +57,13 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createShopUserTableQuery);
+
+    // Migration for existing shop_user table without fcmToken column
+    try {
+      await activePool.query(`ALTER TABLE shop_user ADD COLUMN fcmToken TEXT NULL;`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
 
     // Ensure categories table exists
     const createCategoriesTableQuery = `

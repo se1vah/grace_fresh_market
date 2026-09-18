@@ -7,6 +7,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const { email, password } = body;
+    const rawFcmToken = body.fcmToken || body.fcm_token;
+    const fcmToken = typeof rawFcmToken === 'string' && rawFcmToken.trim() ? rawFcmToken.trim() : null;
 
     // 1. Basic validation
     if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
@@ -43,10 +45,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Convert isSuperAdmin column (tinyint/boolean) to boolean
+    // 4. Store fcmToken in shop_user table if provided
+    if (fcmToken) {
+      await query(
+        'UPDATE shop_user SET fcmToken = ? WHERE id = ?',
+        [fcmToken, user.id]
+      );
+    }
+
+    // 5. Convert isSuperAdmin column (tinyint/boolean) to boolean
     const isSuperAdmin = Boolean(user.isSuperAdmin);
 
-    // 5. Generate JWT token
+    // 6. Generate JWT token
     const token = await signShopToken({
       id: user.id,
       email: user.email,

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, LogOut, Loader2, Bell, ShieldCheck, User } from 'lucide-react';
+import { Menu, LogOut, Loader2 } from 'lucide-react';
+import { ShopNotificationBell } from '@/components/shop/notifications/ShopNotificationManager';
 
 interface AdminHeaderProps {
   user: {
@@ -50,6 +51,9 @@ export default function AdminHeader({ user, setMobileOpen }: AdminHeaderProps) {
 
         {/* Right Side: Actions & User Info */}
         <div className="flex items-center gap-3">
+          {/* Web Push Notification Bell Toggle */}
+          <ShopNotificationBell />
+
           {/* User Badge */}
           <div className="hidden md:flex items-center gap-2.5 bg-[#F2F7F2] border border-[#E2EAE1] px-3 py-1.5 rounded-xl">
             <div className="w-7 h-7 rounded-full bg-[#2D5A27] text-white flex items-center justify-center text-xs font-bold">
