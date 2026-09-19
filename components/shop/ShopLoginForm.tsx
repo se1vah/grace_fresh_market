@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Leaf, Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { requestShopFcmToken, getCachedShopFcmToken } from '@/lib/firebase/messaging';
 
 export default function ShopLoginForm() {
   const router = useRouter();
@@ -24,12 +25,25 @@ export default function ShopLoginForm() {
     setIsLoading(true);
 
     try {
+      // Attempt to retrieve or prompt for FCM Web Push Token
+      let fcmToken = getCachedShopFcmToken();
+      try {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+          if (Notification.permission === 'granted' || Notification.permission === 'default') {
+            const { token } = await requestShopFcmToken();
+            if (token) fcmToken = token;
+          }
+        }
+      } catch (fcmErr) {
+        console.warn('FCM Token generation error during login:', fcmErr);
+      }
+
       const res = await fetch('/api/shop/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, fcmToken }),
       });
 
       const data = await res.json();

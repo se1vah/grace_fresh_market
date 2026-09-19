@@ -8,6 +8,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const { email, password } = body;
+    const rawFcmToken = body.fcmToken || body.fcm_token;
+    const fcmToken = typeof rawFcmToken === 'string' && rawFcmToken.trim() ? rawFcmToken.trim() : null;
 
     // 1. Basic validation
     if (!email || typeof email !== 'string' || !email.trim()) {
@@ -65,10 +67,10 @@ export async function POST(request: Request) {
       phoneNumber: userPhone,
     });
 
-    // 5. Store JWT token in `userLogin` table
+    // 5. Store JWT token and fcmToken in `userLogin` table
     await query<ResultSetHeader>(
-      'INSERT INTO userLogin (user_id, token) VALUES (?, ?)',
-      [user.id, token]
+      'INSERT INTO userLogin (user_id, token, fcmToken) VALUES (?, ?, ?)',
+      [user.id, token, fcmToken]
     );
 
     // 6. Return response with token and cookie
