@@ -277,7 +277,8 @@ export default function SubCategoryModal({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to save subcategory');
+        setGeneralError(data.error || 'An unexpected error occurred while saving.');
+        return;
       }
 
       onSuccess();
@@ -320,13 +321,6 @@ export default function SubCategoryModal({
 
       {/* Form Body */}
       <form onSubmit={handleSubmit} className="p-6 space-y-4 font-nunito">
-        {generalError && (
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 shadow-2xs animate-in fade-in zoom-in-95 duration-200">
-            <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
-            <span>{generalError}</span>
-          </div>
-        )}
-
         {/* 1. Category Dropdown with Modern Validation UI */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand flex items-center justify-between">
@@ -622,6 +616,12 @@ export default function SubCategoryModal({
             )}
           </button>
         </div>
+        {generalError && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 shadow-2xs animate-in fade-in zoom-in-95 duration-200">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{generalError}</span>
+          </div>
+        )}
       </form>
     </Modal>
   );

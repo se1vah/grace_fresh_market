@@ -83,7 +83,58 @@ Accept: application/json
 
 ---
 
+## PUT `/api/shop/categories/:id`
+
+Updates category information, measurement type, image, and status.
+
+### Request Details
+- **HTTP Method**: `PUT`
+- **URL Path**: `/api/shop/categories/:id`
+- **Content-Type**: `multipart/form-data`
+- **Authentication**: Admin JWT Token (Cookie: `shop_token`)
+
+### Validation Rules
+- **Inactive State Restriction**: When setting `status` to `"inactive"`, the request is rejected with `400 Bad Request` if:
+  1. The category has subcategories assigned to it.
+  2. Any order containing items from this category (or its subcategories) has an active status that is not `"delivered"` or `"cancelled"`.
+
+#### Example Inactive State Error Response (`400 Bad Request`)
+```json
+{
+  "error": "Cannot make this category inactive because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first.",
+  "message": "Cannot make this category inactive because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first."
+}
+```
+
+---
+
+## DELETE `/api/shop/categories/:id`
+
+Deletes a category and removes its image asset from server disk.
+
+### Request Details
+- **HTTP Method**: `DELETE`
+- **URL Path**: `/api/shop/categories/:id`
+- **Authentication**: Admin JWT Token (Cookie: `shop_token`)
+
+### Validation Rules
+- **Active Subcategories Restriction**: Rejected if subcategories are assigned to the category.
+- **Active Orders Restriction**: Rejected with `400 Bad Request` if any order containing items from this category (or its subcategories) has a status other than `"delivered"` or `"cancelled"`.
+
+#### Example Delete Error Response (`400 Bad Request`)
+```json
+{
+  "error": "Cannot delete this category because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first.",
+  "message": "Cannot delete this category because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first."
+}
+```
+
+---
+
 ## Summary of Status Codes
 
 - `200 OK`: Request succeeded and returned requested data payload.
+- `400 Bad Request`: Validation failure (assigned subcategories exist, active orders exist, invalid format/size).
+- `401 Unauthorized`: Missing or invalid Admin JWT session token.
+- `404 Not Found`: Category ID not found.
 - `500 Internal Server Error`: Server or database query error.

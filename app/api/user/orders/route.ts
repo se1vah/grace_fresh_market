@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
-import { GET as handleGetAllOrders } from '../../users/orders/route';
+import {
+  GET as handleGetAllOrders,
+  POST as handleCreateOrder,
+} from '../../users/orders/route';
 
 /**
  * GET /api/user/orders
@@ -8,3 +11,12 @@ import { GET as handleGetAllOrders } from '../../users/orders/route';
 export async function GET(request: NextRequest) {
   return handleGetAllOrders(request);
 }
+
+/**
+ * POST /api/user/orders
+ * Alias endpoint for createOrder API.
+ */
+export async function POST(request: NextRequest) {
+  return handleCreateOrder(request);
+}
+

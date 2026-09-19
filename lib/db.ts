@@ -384,7 +384,7 @@ export async function initShopDb(): Promise<void> {
 
     // Seed default initial app_settings if empty
     try {
-      const [settingRows] = await activePool.query<any[]>('SELECT COUNT(*) as count FROM app_settings');
+      const [settingRows] = await activePool.query<mysql.RowDataPacket[]>('SELECT COUNT(*) as count FROM app_settings');
       if (settingRows && settingRows[0] && settingRows[0].count === 0) {
         await activePool.query(
           'INSERT INTO app_settings (email, phone_number) VALUES (?, ?)',
@@ -431,7 +431,8 @@ export async function initShopDb(): Promise<void> {
           categoryId INT NOT NULL,
           subcategoryId INT NOT NULL,
           subcategoryName VARCHAR(255) NOT NULL DEFAULT '',
-          amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           categoryName VARCHAR(255) NOT NULL DEFAULT '',
           categoryType VARCHAR(50) NOT NULL DEFAULT '',
           quantity FLOAT NOT NULL DEFAULT 1,
@@ -469,6 +470,42 @@ export async function initShopDb(): Promise<void> {
     await activePool.query(createOrderStatusTableQuery);
 
     try {
+      await activePool.query('ALTER TABLE `Order` DROP COLUMN grandTotal;');
+    } catch {
+      // Column may not exist or already dropped
+    }
+
+    try {
+      await activePool.query('ALTER TABLE OrderItems DROP COLUMN amount;');
+    } catch {
+      // Column may not exist or already dropped
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE \`Order\` ADD COLUMN total DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderItems ADD COLUMN price DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderItems ADD COLUMN itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
       await activePool.query(
         'ALTER TABLE OrderItems ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
       );
@@ -498,6 +535,27 @@ export async function initShopDb(): Promise<void> {
       );
     } catch {
       // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        "ALTER TABLE OrderStatus MODIFY COLUMN status ENUM('ordered', 'packed', 'out for delivery', 'delivered', 'cancelled') NOT NULL DEFAULT 'ordered';"
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    // Compatibility views for legacy raw queries referencing 'orders' and 'order_items'
+    try {
+      await activePool.query('CREATE OR REPLACE VIEW orders AS SELECT * FROM `Order`;');
+    } catch {
+      // View creation may fail if restricted DB permissions
+    }
+
+    try {
+      await activePool.query('CREATE OR REPLACE VIEW order_items AS SELECT * FROM OrderItems;');
+    } catch {
+      // View creation may fail if restricted DB permissions
     }
 
     initialized = true;

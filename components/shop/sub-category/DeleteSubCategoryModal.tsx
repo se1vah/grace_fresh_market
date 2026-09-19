@@ -34,7 +34,8 @@ export default function DeleteSubCategoryModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete subcategory');
+        setError(data.error || 'An error occurred during deletion.');
+        return;
       }
       onSuccess();
       onClose();

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { query } from '@/lib/db';
 
-export const DEFAULT_SUBCATEGORY_IMAGE = '/images/subcategory/subCategoryDefault.png';
+export const DEFAULT_SUBCATEGORY_IMAGE = '/app-images/subCategoryDefault.png';
 
 export interface OrderStatus {
   id: number;
@@ -112,7 +112,8 @@ interface OrderItemRow {
   categoryId: number;
   subcategoryId: number;
   subcategoryName: string;
-  amount: unknown;
+  price: unknown;
+  itemTotal?: unknown;
   categoryName: string;
   categoryType: string;
   quantity: unknown;
@@ -302,24 +303,25 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
   const statusRows =
     orderIds.length > 0
       ? await query<OrderStatusRow[]>(
-          `SELECT id, orderId, status, createdAt, updatedAt
+        `SELECT id, orderId, status, createdAt, updatedAt
            FROM OrderStatus
            WHERE orderId IN (${inPlaceholders(orderIds)})
            ORDER BY id ASC`,
-          orderIds
-        )
+        orderIds
+      )
       : [];
 
   const itemRows =
     orderIds.length > 0
       ? await query<OrderItemRow[]>(
-          `SELECT
+        `SELECT
               id,
               orderId,
               categoryId,
               subcategoryId,
               subcategoryName,
-              amount,
+              price,
+              itemTotal,
               categoryName,
               categoryType,
               quantity,
@@ -328,28 +330,28 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
            FROM OrderItems
            WHERE orderId IN (${inPlaceholders(orderIds)})
            ORDER BY id ASC`,
-          orderIds
-        )
+        orderIds
+      )
       : [];
 
   const paymentRows =
     paymentMethodIds.length > 0
       ? await query<PaymentMethodRow[]>(
-          `SELECT id, paymentType, description
+        `SELECT id, paymentType, description
            FROM PaymentMethod
            WHERE id IN (${inPlaceholders(paymentMethodIds)})`,
-          paymentMethodIds
-        )
+        paymentMethodIds
+      )
       : [];
 
   const addressRows =
     addressIds.length > 0
       ? await query<AddressRow[]>(
-          `SELECT id, building_name, street_name, city, state, pincode, address_type
+        `SELECT id, building_name, street_name, city, state, pincode, address_type
            FROM user_addresses
            WHERE id IN (${inPlaceholders(addressIds)})`,
-          addressIds
-        )
+        addressIds
+      )
       : [];
 
   const categoryIds = [
@@ -370,32 +372,32 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
   const categoryRows =
     categoryIds.length > 0
       ? await query<CategoryRow[]>(
-          `SELECT id, category_name, category_type, status
+        `SELECT id, category_name, category_type, status
            FROM categories
            WHERE id IN (${inPlaceholders(categoryIds)})`,
-          categoryIds
-        )
+        categoryIds
+      )
       : [];
 
   const subcategoryRows =
     subcategoryIds.length > 0
       ? await query<SubcategoryRow[]>(
-          `SELECT id, subcategory_name, amount, category_id, status
+        `SELECT id, subcategory_name, amount, category_id, status
            FROM subcategories
            WHERE id IN (${inPlaceholders(subcategoryIds)})`,
-          subcategoryIds
-        )
+        subcategoryIds
+      )
       : [];
 
   const imageRows =
     subcategoryIds.length > 0
       ? await query<ImageRow[]>(
-          `SELECT subcategory_id, image_url
+        `SELECT subcategory_id, image_url
            FROM subcategory_images
            WHERE subcategory_id IN (${inPlaceholders(subcategoryIds)})
            ORDER BY is_primary DESC, id ASC`,
-          subcategoryIds
-        )
+        subcategoryIds
+      )
       : [];
 
   const statusesByOrder: Record<number, OrderStatus[]> = {};
@@ -469,9 +471,11 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
 
     const rawItems = itemsByOrder[order.id] || [];
     const items: OrderItem[] = rawItems.map((item) => {
-      const historicalAmount = money(item.amount);
+      const historicalAmount = money(item.price);
       const quantity = toNumber(item.quantity);
-      const itemTotal = money(historicalAmount * quantity);
+      const itemTotal = item.itemTotal != null && !isNaN(Number(item.itemTotal))
+        ? money(item.itemTotal)
+        : money(historicalAmount * quantity);
 
       const liveSub = subcategoryMap[item.subcategoryId];
       const useLiveSub = liveSub && liveSub.status === 'active';
@@ -485,19 +489,19 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
 
       const subcategory: OrderSubcategory = useLiveSub
         ? {
-            id: liveSub.id,
-            subcategoryName: liveSub.subcategory_name,
-            amount: money(liveSub.amount),
-            images: resolveSubcategoryImages(imagesMap[liveSub.id] || []),
-            category,
-          }
+          id: liveSub.id,
+          subcategoryName: liveSub.subcategory_name,
+          amount: money(liveSub.amount),
+          images: resolveSubcategoryImages(imagesMap[liveSub.id] || []),
+          category,
+        }
         : {
-            id: item.subcategoryId,
-            subcategoryName: item.subcategoryName || liveSub?.subcategory_name || '',
-            amount: historicalAmount,
-            images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || []),
-            category,
-          };
+          id: item.subcategoryId,
+          subcategoryName: item.subcategoryName || liveSub?.subcategory_name || '',
+          amount: historicalAmount,
+          images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || []),
+          category,
+        };
 
       return {
         id: item.id,
@@ -533,6 +537,7 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
         itemCount: items.length,
         totalAmount: subTotal,
         deliveryFee,
+        total: money(order.total),
       },
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,

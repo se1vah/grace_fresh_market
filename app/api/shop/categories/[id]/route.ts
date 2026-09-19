@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
+import { getActiveOrderForCategory } from '@/lib/services/order-status-check';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -82,6 +83,20 @@ export async function PUT(
       if (subCatTotal > 0) {
         return NextResponse.json(
           { error: 'Cannot make this category inactive because it has item assigned to it.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check if category has any active orders (status not in 'delivered', 'cancelled')
+    if (status === 'inactive') {
+      const orderCheck = await getActiveOrderForCategory(categoryId);
+      if (orderCheck.hasActiveOrders) {
+        return NextResponse.json(
+          {
+            error: `Cannot make this category inactive because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+            message: `Cannot make this category inactive because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+          },
           { status: 400 }
         );
       }
@@ -191,6 +206,18 @@ export async function DELETE(
         {
           error:
             'Cannot delete this category because it has item assigned to it. Please remove or reassign the item first.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if category has any active orders (status not in 'delivered', 'cancelled')
+    const orderCheck = await getActiveOrderForCategory(categoryId);
+    if (orderCheck.hasActiveOrders) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete this category because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+          message: `Cannot delete this category because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
         },
         { status: 400 }
       );

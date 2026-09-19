@@ -138,6 +138,18 @@ Updates an existing subcategory item, managing multi-image file retention/additi
 | `offer` | `number` | No | Updated optional offer percentage (0 to 100). |
 | `existing_images` | `string[]` | No | List of existing relative image URL paths to retain. |
 | `images` | `File[]` | No | New image files to upload and append. |
+| `status` | `string` | No | Updated status (`"active"` or `"inactive"`). |
+
+### Validation Rules
+- **Inactive State Restriction**: Setting `status` to `"inactive"` is rejected with `400 Bad Request` if any order containing this subcategory has an active status that is not `"delivered"` or `"cancelled"`.
+
+#### Example Inactive State Error Response (`400 Bad Request`)
+```json
+{
+  "error": "Cannot make this subcategory inactive because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first.",
+  "message": "Cannot make this subcategory inactive because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first."
+}
+```
 
 ---
 
@@ -150,12 +162,23 @@ Deletes a subcategory item and removes all associated stored image files from di
 - **URL Path**: `/api/shop/sub-categories/:id`
 - **Authentication**: Admin JWT Token (Cookie: `shop_token`)
 
+### Validation Rules
+- **Active Orders Restriction**: Deletion is rejected with `400 Bad Request` if any order containing this subcategory has a status other than `"delivered"` or `"cancelled"`.
+
+#### Example Delete Error Response (`400 Bad Request`)
+```json
+{
+  "error": "Cannot delete this subcategory because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first.",
+  "message": "Cannot delete this subcategory because order #1 is currently in 'ordered' status. All orders must be delivered or cancelled first."
+}
+```
+
 ---
 
 ## Summary of Status Codes
 
 - `200 OK` / `201 Created`: Request succeeded.
-- `400 Bad Request`: Validation failure (invalid category, negative stock, invalid image format/size).
+- `400 Bad Request`: Validation failure (active orders exist, invalid category, negative stock, invalid image format/size).
 - `401 Unauthorized`: Missing or invalid JWT session token.
 - `404 Not Found`: Subcategory not found.
 - `500 Internal Server Error`: Server or database query error.

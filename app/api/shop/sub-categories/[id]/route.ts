@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
+import { getActiveOrderForSubcategory } from '@/lib/services/order-status-check';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -162,6 +163,20 @@ export async function PUT(
     // Validate Status
     if (!['active', 'inactive'].includes(status)) {
       return NextResponse.json({ error: 'Status must be active or inactive' }, { status: 400 });
+    }
+
+    // Check if subcategory has any active orders (status not in 'delivered', 'cancelled')
+    if (status === 'inactive') {
+      const orderCheck = await getActiveOrderForSubcategory(subCategoryId);
+      if (orderCheck.hasActiveOrders) {
+        return NextResponse.json(
+          {
+            error: `Cannot make this subcategory inactive because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+            message: `Cannot make this subcategory inactive because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate Amount
@@ -366,6 +381,18 @@ export async function DELETE(
     }
 
     const existingSubCategory = existingRows[0];
+
+    // Check if subcategory has any active orders (status not in 'delivered', 'cancelled')
+    const orderCheck = await getActiveOrderForSubcategory(subCategoryId);
+    if (orderCheck.hasActiveOrders) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete this subcategory because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+          message: `Cannot delete this subcategory because order #${orderCheck.orderId} is currently in '${orderCheck.status}' status. All orders must be delivered or cancelled first.`,
+        },
+        { status: 400 }
+      );
+    }
 
     // Fetch images to delete from disk
     const imgRows = await query<any[]>(
