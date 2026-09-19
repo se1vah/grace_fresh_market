@@ -379,6 +379,111 @@ export async function initShopDb(): Promise<void> {
       console.error('Error seeding app_settings:', err);
     }
 
+    // Ensure Order table exists (reserved MySQL keyword — always quote with backticks)
+    const createOrderTableQuery = `
+      CREATE TABLE IF NOT EXISTS \`Order\` (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          userId INT NOT NULL,
+          subTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          totalItems FLOAT NOT NULL DEFAULT 0,
+          deliveryFee DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          paymentMethodId INT NULL DEFAULT NULL,
+          addressid INT NULL DEFAULT NULL,
+          building_name VARCHAR(255) NULL DEFAULT '',
+          street_name VARCHAR(255) NULL DEFAULT '',
+          city VARCHAR(100) NULL DEFAULT '',
+          state VARCHAR(100) NULL DEFAULT '',
+          pincode VARCHAR(20) NULL DEFAULT '',
+          address_type VARCHAR(50) NULL DEFAULT '',
+          createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_order_user (userId),
+          INDEX idx_order_payment_method (paymentMethodId),
+          CONSTRAINT fk_order_user
+              FOREIGN KEY (userId) REFERENCES users(id)
+              ON DELETE CASCADE
+      );
+    `;
+
+    await activePool.query(createOrderTableQuery);
+
+    const createOrderItemsTableQuery = `
+      CREATE TABLE IF NOT EXISTS OrderItems (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          orderId INT NOT NULL,
+          categoryId INT NOT NULL,
+          subcategoryId INT NOT NULL,
+          subcategoryName VARCHAR(255) NOT NULL DEFAULT '',
+          amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          categoryName VARCHAR(255) NOT NULL DEFAULT '',
+          categoryType VARCHAR(50) NOT NULL DEFAULT '',
+          quantity FLOAT NOT NULL DEFAULT 1,
+          createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_order_items_order (orderId),
+          CONSTRAINT fk_order_items_order
+              FOREIGN KEY (orderId) REFERENCES \`Order\`(id)
+              ON DELETE CASCADE
+      );
+    `;
+
+    await activePool.query(createOrderItemsTableQuery);
+
+    try {
+      await activePool.query('RENAME TABLE orderStatus TO OrderStatus;');
+    } catch {
+      // Table may already be named OrderStatus, or may not exist yet.
+    }
+
+    const createOrderStatusTableQuery = `
+      CREATE TABLE IF NOT EXISTS OrderStatus (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          orderId INT NOT NULL,
+          status ENUM('ordered', 'packed', 'out for delivery', 'delivered', 'cancelled') NOT NULL DEFAULT 'ordered',
+          createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_order_status_order (orderId),
+          CONSTRAINT fk_order_status_order
+              FOREIGN KEY (orderId) REFERENCES \`Order\`(id)
+              ON DELETE CASCADE
+      );
+    `;
+
+    await activePool.query(createOrderStatusTableQuery);
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderItems ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderItems ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderStatus ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE OrderStatus ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
+      );
+    } catch {
+      // Column may already exist
+    }
+
     initialized = true;
   } catch (error) {
     console.error('Failed to initialize shop database:', error);
