@@ -7,7 +7,7 @@ let adminApp: App | null = null;
 /**
  * Initializes the Firebase Admin SDK if not already initialized
  */
-function getAdminApp(): App | null {
+export function getAdminApp(): App | null {
   const existingApps = getApps();
   if (existingApps.length > 0) {
     adminApp = existingApps[0];

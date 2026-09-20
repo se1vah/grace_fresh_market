@@ -1,115 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
-
-// Helper to fetch complete cart items & summary for a user
-async function fetchUserCart(userId: number) {
-  const cartRows = await query<any[]>(
-    `SELECT 
-        c.id as cart_id,
-        c.user_id,
-        c.subcategory_id,
-        c.quantity,
-        c.created_at as cart_created_at,
-        c.updated_at as cart_updated_at,
-        s.subcategory_name,
-        s.status as subcategory_status,
-        s.amount,
-        s.stock,
-        s.offer,
-        s.category_id,
-        cat.category_name,
-        cat.category_type,
-        cat.status as category_status
-     FROM cart c
-     JOIN subcategories s ON c.subcategory_id = s.id
-     JOIN categories cat ON s.category_id = cat.id
-     WHERE c.user_id = ?
-     ORDER BY c.updated_at DESC`,
-    [userId]
-  );
-
-  if (!cartRows || cartRows.length === 0) {
-    return {
-      cartItems: [],
-      cartSummary: {
-        totalItems: 0,
-        itemCount: 0,
-        totalAmount: 0,
-      },
-    };
-  }
-
-  const subcategoryIds = [...new Set(cartRows.map((row) => row.subcategory_id))];
-  const imagesMap: Record<number, string[]> = {};
-
-  if (subcategoryIds.length > 0) {
-    const imgRows = await query<any[]>(
-      `SELECT subcategory_id, image_url 
-       FROM subcategory_images 
-       WHERE subcategory_id IN (${subcategoryIds.map(() => '?').join(',')}) 
-       ORDER BY is_primary DESC, id ASC`,
-      subcategoryIds
-    );
-
-    imgRows.forEach((imgRow) => {
-      if (!imagesMap[imgRow.subcategory_id]) {
-        imagesMap[imgRow.subcategory_id] = [];
-      }
-      imagesMap[imgRow.subcategory_id].push(imgRow.image_url);
-    });
-  }
-
-  let totalItems = 0;
-  let totalAmount = 0;
-
-  const formattedItems = cartRows.map((row) => {
-    const unitPrice = Number(row.amount) || 0;
-    const qty = Number(row.quantity) || 0;
-    const itemTotal = unitPrice * qty;
-
-    totalItems += qty;
-    totalAmount += itemTotal;
-
-    const itemImages = imagesMap[row.subcategory_id] || [];
-
-    return {
-      id: row.cart_id,
-      cartId: row.cart_id,
-      userId: row.user_id,
-      subcategoryId: row.subcategory_id,
-      quantity: qty,
-      itemTotal: Number(itemTotal.toFixed(2)),
-      subcategory: {
-        id: row.subcategory_id,
-        subcategoryName: row.subcategory_name,
-        amount: unitPrice,
-        stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
-        offer: Number(row.offer || 0),
-        status: row.subcategory_status,
-        images: itemImages,
-        primaryImage: itemImages[0] || '',
-        category: {
-          id: row.category_id,
-          categoryName: row.category_name,
-          categoryType: row.category_type,
-          status: row.category_status,
-        },
-      },
-      createdAt: row.cart_created_at,
-      updatedAt: row.cart_updated_at,
-    };
-  });
-
-  return {
-    cartItems: formattedItems,
-    cartSummary: {
-      totalItems,
-      itemCount: formattedItems.length,
-      totalAmount: Number(totalAmount.toFixed(2)),
-    },
-  };
-}
+import { fetchUserCart } from '../route';
 
 export interface BulkCartItemInput {
   subcategory_id?: number;
@@ -121,13 +13,8 @@ export interface BulkCartItemInput {
 }
 
 /**
- * POST /api/cart/bulk
+ * POST /api/user/cart/bulk
  * Bulk add/update items in the user's shopping cart.
- *
- * Payload options:
- * - mode: "merge" (default - merges with existing cart items) or "replace" (clears existing cart before adding)
- * - defaultAction: "add" (default - increments quantity) or "set" (overwrites quantity)
- * - items: Array of { subcategory_id, quantity, action? }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -263,7 +150,6 @@ export async function POST(request: NextRequest) {
       if (itemInput.action === 'set') {
         targetQuantities[subId] = itemInput.quantity;
       } else {
-        // 'add'
         const baseQty = targetQuantities[subId] !== undefined 
           ? targetQuantities[subId] 
           : (mode === 'replace' ? 0 : currentQtyInCart);

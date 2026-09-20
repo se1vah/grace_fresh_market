@@ -19,6 +19,7 @@ export interface CategorySimple {
   categoryName?: string;
   image?: string;
   status?: string;
+  category_type?: 'gram' | 'quantity' | string;
 }
 
 export interface SubCategoryData {

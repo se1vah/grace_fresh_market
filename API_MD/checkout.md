@@ -1,6 +1,6 @@
 # Checkout Details API Documentation
 
-## GET `/api/cart/get-check-out-details` — `getCheckOutDetails`
+## GET `/api/user/cart/get-check-out-details` — `getCheckOutDetails`
 
 Returns checkout-ready data for the authenticated user: their default delivery
 address and the payment methods configured in the `PaymentMethod` table.

@@ -37,59 +37,36 @@ HTTP Status: `401 Unauthorized`.
 
 ```json
 {
-  "cartSummary": {
-    "totalItems": 3,
-    "itemCount": 2,
-    "totalAmount": 25,
-    "deliveryFee": 40
-  },
+  "cartId": 12,
   "addressId": 1,
-  "paymentMethodId": 1,
-  "items": [
-    {
-      "subcategoryId": 1,
-      "quantity": 1,
-      "itemTotal": 20,
-      "subcategory": {
-        "id": 1,
-        "subcategoryName": "Orange",
-        "amount": 5
-      },
-      "category": {
-        "id": 3,
-        "categoryName": "Fruits",
-        "categoryType": "gram"
-      }
-    }
-  ]
+  "paymentMethodId": 1
 }
 ```
 
-#### Trusted vs Untrusted Request Fields
-- **Trusted**: 
-  - `items[].subcategoryId` and `items[].quantity`
-  - Optional `addressId` (or `deliveryAddress.id`): If omitted, the user's default saved address is snapshotted.
-  - Optional `paymentMethodId` (or `paymentMethod.id`): If omitted, the default payment method is used.
-- **Untrusted (Ignored & Server-Calculated)**:
-  - `cartSummary.totalItems`
-  - `cartSummary.itemCount`
-  - `cartSummary.totalAmount`
-  - `cartSummary.deliveryFee`
-  - `items[].itemTotal`
-  - `items[].subcategory.*`
-  - `items[].category.*`
+Or for multiple cart items:
+```json
+{
+  "cartId": [12, 13, 14],
+  "addressId": 1,
+  "paymentMethodId": 1
+}
+```
 
-All amounts, item totals, delivery fee, totals, category metadata, and stock are queried directly from the database to prevent client-side manipulation.
+#### Request Fields
+- `cartId` (**Required**): Integer or Array of Integers representing the `id`(s) from the `cart` table.
+- `addressId` (*Optional*): Integer ID of delivery address. If omitted, the user's default saved address is used.
+- `paymentMethodId` (*Optional*): Integer ID of payment method. If omitted, default payment method is used.
+
+All amounts, item totals, delivery fee, totals, category metadata, and stock are queried directly from the `cart` and `subcategories` tables on the server.
 
 ---
 
 ### Request Validation Rules
 
-- `cartSummary` must exist and be an object.
-- `items` must exist and be a non-empty array.
-- Every item must include `subcategoryId` (positive integer).
-- Every item must include `quantity` (positive integer: rejecting `0`, negative numbers, decimals, non-numbers).
-- Duplicate `subcategoryId` entries within the same request are rejected.
+- `cartId` must exist and be a positive integer or non-empty array of positive integers.
+- The specified `cartId`(s) must exist in the `cart` table and belong to the authenticated user.
+- Stock is validated for all items referenced by the cart entries.
+- Ordered items are automatically deleted from the `cart` table upon successful order placement.
 
 ---
 

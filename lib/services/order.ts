@@ -41,7 +41,7 @@ export interface OrderItemResponse {
     subcategoryName: string;
     amount: number;
     image: string[];
-    stock: number;
+    stock: number | null;
   };
   category: {
     id: number;
@@ -102,6 +102,7 @@ export interface OrderSummaryResponse {
 export interface CreateOrderOptions {
   addressId?: number;
   paymentMethodId?: number;
+  cartIds?: number[];
 }
 
 export interface CreateOrderResult {
@@ -173,7 +174,18 @@ export async function fetchDeliveryFee(
  */
 export async function getShopPendingOrderCount(): Promise<number> {
   const rows = await query<OrderCountRow[]>(
-    "SELECT COUNT(DISTINCT orderId) as orderCount FROM OrderStatus WHERE status IN ('ordered', 'orderd')"
+    `SELECT COUNT(DISTINCT o.id) as orderCount
+     FROM \`Order\` o
+     LEFT JOIN (
+         SELECT os1.orderId, os1.status
+         FROM OrderStatus os1
+         INNER JOIN (
+             SELECT orderId, MAX(id) AS max_id
+             FROM OrderStatus
+             GROUP BY orderId
+         ) os2 ON os1.id = os2.max_id
+     ) latest_status ON o.id = latest_status.orderId
+     WHERE LOWER(TRIM(COALESCE(latest_status.status, 'ordered'))) IN ('ordered', 'orderd')`
   );
   return Number(rows[0]?.orderCount || 0);
 }
@@ -224,8 +236,8 @@ export async function createOrderFromCart(
       subcategoryName: string;
       price: number;
       itemTotal: number;
-      currentStock: number;
-      newStock: number;
+      currentStock: number | null;
+      newStock: number | null;
       categoryId: number;
       categoryName: string;
       categoryType: string;
@@ -279,14 +291,14 @@ export async function createOrderFromCart(
       }
     }
 
-    // 4. Validate stock for every item
+    // 4. Validate stock for every item (if stock column is configured / not null)
     for (const item of items) {
       const dbRow = dbSubcategoryMap.get(item.subcategoryId)!;
       const subcategoryName = dbRow.subcategory_name || `Subcategory #${item.subcategoryId}`;
-      const currentStock =
-        dbRow.stock !== null && dbRow.stock !== undefined ? Number(dbRow.stock) : 0;
+      const hasStockLimit = dbRow.stock !== null && dbRow.stock !== undefined;
+      const currentStock = hasStockLimit ? Number(dbRow.stock) : null;
 
-      if (item.quantity > currentStock) {
+      if (hasStockLimit && currentStock !== null && item.quantity > currentStock) {
         throw new OrderError(
           `Insufficient stock for ${subcategoryName}. Available stock: ${currentStock}, requested quantity: ${item.quantity}.`,
           400,
@@ -296,7 +308,7 @@ export async function createOrderFromCart(
 
       const unitPrice = Number(dbRow.amount) || 0;
       const itemTotal = Number((unitPrice * item.quantity).toFixed(2));
-      const newStock = currentStock - item.quantity;
+      const newStock = hasStockLimit && currentStock !== null ? currentStock - item.quantity : null;
 
       calculatedItemsMap.set(item.subcategoryId, {
         subcategoryId: item.subcategoryId,
@@ -527,28 +539,38 @@ export async function createOrderFromCart(
       );
     }
 
-    // 8. Safely reduce stock in subcategories
+    // 8. Safely reduce stock in subcategories (only if stock is configured / not null)
     for (const item of items) {
       const calc = calculatedItemsMap.get(item.subcategoryId)!;
-      const [updateResult] = await connection.query<mysql.ResultSetHeader>(
-        'UPDATE subcategories SET stock = stock - ? WHERE id = ? AND stock >= ?',
-        [item.quantity, item.subcategoryId, item.quantity]
-      );
-
-      if (updateResult.affectedRows === 0) {
-        throw new OrderError(
-          `Insufficient stock for ${calc.subcategoryName}. Available stock could not fulfill requested quantity of ${item.quantity}.`,
-          400,
-          'INSUFFICIENT_STOCK'
+      if (calc.currentStock !== null) {
+        const [updateResult] = await connection.query<mysql.ResultSetHeader>(
+          'UPDATE subcategories SET stock = stock - ? WHERE id = ? AND stock >= ?',
+          [item.quantity, item.subcategoryId, item.quantity]
         );
+
+        if (updateResult.affectedRows === 0) {
+          throw new OrderError(
+            `Insufficient stock for ${calc.subcategoryName}. Available stock could not fulfill requested quantity of ${item.quantity}.`,
+            400,
+            'INSUFFICIENT_STOCK'
+          );
+        }
       }
     }
 
     // 9. Clean up ordered items from user's cart table
-    await connection.query(
-      `DELETE FROM cart WHERE user_id = ? AND subcategory_id IN (${placeholders})`,
-      [userId, ...sortedIds]
-    );
+    if (options?.cartIds && options.cartIds.length > 0) {
+      const cartPlaceholders = options.cartIds.map(() => '?').join(',');
+      await connection.query(
+        `DELETE FROM cart WHERE user_id = ? AND id IN (${cartPlaceholders})`,
+        [userId, ...options.cartIds]
+      );
+    } else {
+      await connection.query(
+        `DELETE FROM cart WHERE user_id = ? AND subcategory_id IN (${placeholders})`,
+        [userId, ...sortedIds]
+      );
+    }
 
     // 10. Commit the transaction
     await connection.commit();

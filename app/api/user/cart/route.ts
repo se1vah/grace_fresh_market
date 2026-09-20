@@ -17,7 +17,7 @@ async function fetchDeliveryFee(): Promise<number | null> {
 }
 
 // Helper to fetch complete cart items & summary for a user
-async function fetchUserCart(userId: number) {
+export async function fetchUserCart(userId: number) {
   const deliveryFee = await fetchDeliveryFee();
 
   // Fetch cart items joined with subcategories and categories
@@ -130,7 +130,7 @@ async function fetchUserCart(userId: number) {
 }
 
 /**
- * GET /api/cart (getAllCart)
+ * GET /api/user/cart (getAllCart)
  * Retrieves all items in the user's cart.
  */
 export async function GET(request: NextRequest) {
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/cart (addCart)
+ * POST /api/user/cart (addCart)
  * Adds an item to the cart or increments/updates its quantity.
  */
 export async function POST(request: NextRequest) {
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PUT /api/cart
+ * PUT /api/user/cart
  * Updates quantity of an existing cart item or item in cart.
  */
 export async function PUT(request: NextRequest) {
@@ -385,7 +385,7 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
- * DELETE /api/cart
+ * DELETE /api/user/cart
  * Deletes a single item or clears the entire cart for the user.
  */
 export async function DELETE(request: NextRequest) {

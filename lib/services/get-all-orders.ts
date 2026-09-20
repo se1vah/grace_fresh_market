@@ -61,9 +61,19 @@ export interface CartSummary {
   deliveryFee: number;
 }
 
+export interface OrderUserInfo {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  profileImage: string | null;
+  createdAt?: string | Date;
+}
+
 export interface UserOrder {
   id: number;
   userId: number;
+  user?: OrderUserInfo | null;
   subTotal: number;
   totalItems: number;
   deliveryFee: number;
@@ -255,7 +265,15 @@ function resolveCategory(
   };
 }
 
-export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> {
+export interface GetAllOrdersOptions {
+  userId?: number;
+}
+
+export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserOrder[]> {
+  const userId = options?.userId;
+  const whereClause = userId !== undefined ? 'WHERE userId = ?' : '';
+  const params = userId !== undefined ? [userId] : [];
+
   const orders = await query<OrderRow[]>(
     `SELECT
         id,
@@ -275,9 +293,9 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
         createdAt,
         updatedAt
      FROM \`Order\`
-     WHERE userId = ?
+     ${whereClause}
      ORDER BY id DESC`,
-    [userId]
+    params
   );
 
   if (!orders || orders.length === 0) {
@@ -285,6 +303,13 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
   }
 
   const orderIds = orders.map((order) => order.id);
+  const userIds = [
+    ...new Set(
+      orders
+        .map((order) => order.userId)
+        .filter((id): id is number => id !== null && id !== undefined && Number(id) > 0)
+    ),
+  ];
   const paymentMethodIds = [
     ...new Set(
       orders
@@ -456,6 +481,37 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
     }
   }
 
+  interface UserQueryRow {
+    id: number;
+    fullName: string | null;
+    email: string | null;
+    phoneNumber: string | null;
+    profileImage: string | null;
+    created_at: string | Date;
+  }
+
+  const userRows =
+    userIds.length > 0
+      ? await query<UserQueryRow[]>(
+        `SELECT id, fullName, email, phoneNumber, profileImage, created_at
+           FROM users
+           WHERE id IN (${inPlaceholders(userIds)})`,
+        userIds
+      )
+      : [];
+
+  const userMap: Record<number, OrderUserInfo> = {};
+  for (const row of userRows || []) {
+    userMap[row.id] = {
+      id: row.id,
+      fullName: row.fullName || 'Customer',
+      email: row.email || '',
+      phoneNumber: row.phoneNumber || '',
+      profileImage: row.profileImage || null,
+      createdAt: row.created_at,
+    };
+  }
+
   return orders.map((order) => {
     const statusHistory = statusesByOrder[order.id] || [];
     const orderStatus = statusHistory.length > 0 ? statusHistory[statusHistory.length - 1] : null;
@@ -522,6 +578,7 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
     return {
       id: order.id,
       userId: order.userId,
+      user: userMap[order.userId] || null,
       subTotal,
       totalItems,
       deliveryFee,
@@ -543,4 +600,8 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
       updatedAt: order.updatedAt,
     };
   });
+}
+
+export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> {
+  return getAllOrders({ userId });
 }

@@ -49,10 +49,10 @@ export default function Modal({
       onClick={handleBackdropClick}
       aria-modal="true"
       role="dialog"
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-xs flex min-h-full items-start justify-center p-4 sm:p-6"
     >
       <div
-        className={`bg-white rounded-2xl border border-[#E2EAE1] ${maxWidthClass} w-full shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200`}
+        className={`bg-white rounded-2xl border border-[#E2EAE1] ${maxWidthClass} w-full shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200 my-auto`}
       >
         {children}
       </div>

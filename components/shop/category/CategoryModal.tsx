@@ -190,38 +190,41 @@ export default function CategoryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-lg">
-      {/* Modal Header */}
-      <div className="px-6 py-4 border-b border-[#E2EAE1] flex items-center justify-between bg-[#F9FBF9]">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-[#EAF2EA] text-[#2D5A27] shadow-2xs">
-            <FolderPlus className="w-5 h-5" />
+      <div className="flex flex-col max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-3.5rem)]">
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-[#E2EAE1] flex items-center justify-between bg-[#F9FBF9] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-[#EAF2EA] text-[#2D5A27] shadow-2xs">
+              <FolderPlus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold font-quicksand text-[#2D5A27]">
+                {isEditMode ? 'Edit Category' : 'Add Category'}
+              </h3>
+              <p className="text-xs text-gray-500 font-nunito">
+                Create or manage shop category details, type, and image.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-bold font-quicksand text-[#2D5A27]">
-              {isEditMode ? 'Edit Category' : 'Add Category'}
-            </h3>
-            <p className="text-xs text-gray-500 font-nunito">
-              Create or manage shop category details, type, and image.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          disabled={isSubmitting}
-          className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
 
-      {/* Form Body */}
-      <form onSubmit={handleSubmit} className="p-6 space-y-4 font-nunito">
-        {generalError && (
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 shadow-2xs animate-in fade-in zoom-in-95 duration-200">
-            <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
-            <span>{generalError}</span>
-          </div>
-        )}
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="p-6 space-y-4 font-nunito overflow-y-auto flex-1">
+            {generalError && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 shadow-2xs animate-in fade-in zoom-in-95 duration-200">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{generalError}</span>
+              </div>
+            )}
 
         {/* Category Name Input */}
         <div>
@@ -379,32 +382,35 @@ export default function CategoryModal({
           </div>
         </div>
 
-        {/* Modal Actions */}
-        <div className="pt-4 border-t border-[#E2EAE1] flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-4 py-2.5 rounded-xl border border-[#E2EAE1] bg-white hover:bg-gray-50 text-gray-700 font-quicksand font-bold text-xs sm:text-sm transition disabled:opacity-50 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl bg-[#2D5A27] hover:bg-[#21431d] text-white font-quicksand font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs transition disabled:opacity-50 cursor-pointer"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <span>{isEditMode ? 'Update Category' : 'Save Category'}</span>
-            )}
-          </button>
-        </div>
-      </form>
+          </div>
+
+          {/* Modal Actions Footer */}
+          <div className="px-6 py-4 border-t border-[#E2EAE1] bg-[#F9FBF9] flex items-center justify-end gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2.5 rounded-xl border border-[#E2EAE1] bg-white hover:bg-gray-50 text-gray-700 font-quicksand font-bold text-xs sm:text-sm transition disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-xl bg-[#2D5A27] hover:bg-[#21431d] text-white font-quicksand font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs transition disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>{isEditMode ? 'Update Category' : 'Save Category'}</span>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 }

@@ -12,8 +12,11 @@ import {
   X,
   Leaf,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingBag,
+  Users
 } from 'lucide-react';
+import { useShopOrders } from '@/components/shop/orders/ShopOrdersContext';
 
 interface AdminSidebarProps {
   user: {
@@ -26,6 +29,7 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ user, mobileOpen, setMobileOpen }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { orderedCount } = useShopOrders();
 
   const navItems = [
     {
@@ -33,6 +37,19 @@ export default function AdminSidebar({ user, mobileOpen, setMobileOpen }: AdminS
       href: '/shop',
       icon: LayoutDashboard,
       exact: true,
+    },
+    {
+      name: 'Orders Management',
+      href: '/shop/orders',
+      icon: ShoppingBag,
+      exact: false,
+      badge: orderedCount,
+    },
+    {
+      name: 'Customer Management',
+      href: '/shop/customers',
+      icon: Users,
+      exact: false,
     },
     {
       name: 'Category',
@@ -135,7 +152,21 @@ export default function AdminSidebar({ user, mobileOpen, setMobileOpen }: AdminS
                   <Icon className={`w-5 h-5 ${active ? 'text-[#80C34A]' : 'text-gray-400 group-hover:text-[#2D5A27]'}`} />
                   <span>{item.name}</span>
                 </div>
-                {active && <ChevronRight className="w-4 h-4 text-[#80C34A]" />}
+                <div className="flex items-center gap-2">
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-extrabold shadow-2xs ${
+                        active
+                          ? 'bg-[#80C34A] text-[#1E3F1B]'
+                          : 'bg-amber-500 text-white animate-pulse'
+                      }`}
+                      title={`${item.badge} pending ordered items`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                  {active && <ChevronRight className="w-4 h-4 text-[#80C34A]" />}
+                </div>
               </Link>
             );
           })}

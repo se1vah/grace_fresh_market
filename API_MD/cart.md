@@ -1,16 +1,16 @@
 # User Cart API Documentation: `addCart` & `getAllCart`
 
-This document details the **User Cart API endpoints** (`addCart`, `getAllCart`, `updateCart`, and `deleteCart`) implemented for the Grace Fresh Market system.
+This document details the **User Cart API endpoints** (`addCart`, `getAllCart`, `updateCart`, and `deleteCart`) implemented for the Grace Fresh Market system under `/api/user/cart`.
 
 ---
 
-## 1. POST `/api/cart/add` (or `POST /api/cart`) - `addCart`
+## 1. POST `/api/user/cart/add` (or `POST /api/user/cart`) - `addCart`
 
 Adds a specific subcategory product item to the user's shopping cart or increments the quantity if the item is already present in the cart.
 
 ### Request Details
 - **HTTP Method**: `POST`
-- **URL Paths**: `/api/cart/add` or `/api/cart`
+- **URL Paths**: `/api/user/cart/add`, `/api/user/cart` (alias: `/api/users/cart`)
 - **Headers**: `Content-Type: application/json`
 - **Authentication**: 
   - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
@@ -81,16 +81,16 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
 
 ---
 
-## 2. GET `/api/cart/get-all` (or `GET /api/cart`) - `getAllCart`
+## 2. GET `/api/user/cart/get-all` (or `GET /api/user/cart`) - `getAllCart`
 
 Retrieves all active items in the specified user's shopping cart along with item details, images, stock, and total price summary.
 
 ### Request Details
 - **HTTP Method**: `GET`
-- **URL Paths**: `/api/cart/get-all` or `/api/cart`
+- **URL Paths**: `/api/user/cart/get-all`, `/api/user/cart` (alias: `/api/users/cart`)
 - **Authentication**: 
   - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
-  - **Option B**: Pass `userId` or `user_id` as URL query parameter (e.g. `/api/cart/get-all?userId=1`).
+  - **Option B**: Pass `userId` or `user_id` as URL query parameter (e.g. `/api/user/cart/get-all?userId=1`).
 
 ### Query Parameters
 
@@ -147,13 +147,13 @@ Retrieves all active items in the specified user's shopping cart along with item
 
 ---
 
-## 3. POST `/api/cart/bulk` (or `POST /api/cart/create-bulk`) - `createBulkCart`
+## 3. POST `/api/user/cart/bulk` (or `POST /api/user/cart/create-bulk`) - `createBulkCart`
 
 Adds or updates multiple items in the user's shopping cart in a single batch request. Supports merging with existing cart items or replacing the cart entirely.
 
 ### Request Details
 - **HTTP Method**: `POST`
-- **URL Paths**: `/api/cart/bulk` or `/api/cart/create-bulk`
+- **URL Paths**: `/api/user/cart/bulk`, `/api/user/cart/create-bulk` (alias: `/api/users/cart/bulk`)
 - **Headers**: `Content-Type: application/json`
 - **Authentication**: 
   - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
@@ -237,9 +237,9 @@ Adds or updates multiple items in the user's shopping cart in a single batch req
 
 ---
 
-## 4. Additional Cart Actions: PUT & DELETE `/api/cart`
+## 4. Additional Cart Actions: PUT & DELETE `/api/user/cart`
 
-### Update Cart Quantity: `PUT /api/cart`
+### Update Cart Quantity: `PUT /api/user/cart`
 Updates item quantity. Setting `quantity: 0` removes the item.
 
 - **Request Body**:
@@ -251,12 +251,12 @@ Updates item quantity. Setting `quantity: 0` removes the item.
   }
   ```
 
-### Delete Cart Item / Clear Cart: `DELETE /api/cart`
+### Delete Cart Item / Clear Cart: `DELETE /api/user/cart`
 Deletes an item or clears the entire cart.
 
 - **Query Parameters**:
-  - Delete single item: `/api/cart?userId=1&subcategoryId=4` or `/api/cart?userId=1&cartId=1`
-  - Clear entire cart: `/api/cart?userId=1&clearAll=true`
+  - Delete single item: `/api/user/cart?userId=1&subcategoryId=4` or `/api/user/cart?userId=1&cartId=1`
+  - Clear entire cart: `/api/user/cart?userId=1&clearAll=true`
 
 ---
 

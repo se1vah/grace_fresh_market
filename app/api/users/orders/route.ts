@@ -94,100 +94,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Validate cartSummary existence
-    if (!body.cartSummary || typeof body.cartSummary !== 'object') {
+    // 3. Extract and validate cartId
+    const rawCartId = body.cartId ?? body.cart_id ?? body.cartIds ?? body.cart_ids;
+
+    if (rawCartId === undefined || rawCartId === null) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Missing or invalid cartSummary.',
+          message: 'cartId is required to create an order.',
         },
         { status: 400 }
       );
     }
 
-    // 4. Validate items array
-    if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
+    let cartIdList: number[] = [];
+    if (Array.isArray(rawCartId)) {
+      cartIdList = rawCartId.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+    } else if (typeof rawCartId === 'string' && rawCartId.includes(',')) {
+      cartIdList = rawCartId
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((id) => Number.isInteger(id) && id > 0);
+    } else {
+      const parsedId = Number(rawCartId);
+      if (Number.isInteger(parsedId) && parsedId > 0) {
+        cartIdList = [parsedId];
+      }
+    }
+
+    if (cartIdList.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Invalid order items. items must be a non-empty array.',
+          message: 'Invalid cartId. Must be a positive integer or array of integers.',
         },
         { status: 400 }
       );
     }
 
-    // 5. Validate each item and check for duplicates
-    const validatedItems: OrderItemInput[] = [];
-    const seenSubcategoryIds = new Set<number>();
+    // 4. Retrieve wanted data from cart table for the authenticated user
+    const placeholders = cartIdList.map(() => '?').join(',');
+    const cartRows = await query<any[]>(
+      `SELECT id, user_id, subcategory_id, quantity 
+       FROM cart 
+       WHERE id IN (${placeholders}) AND user_id = ?`,
+      [...cartIdList, userId]
+    );
 
-    for (let index = 0; index < body.items.length; index++) {
-      const item = body.items[index];
-
-      if (!item || typeof item !== 'object') {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Item at index ${index} is invalid.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check subcategoryId
-      if (item.subcategoryId === undefined || item.subcategoryId === null) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Item at index ${index} is missing subcategoryId.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      const subcategoryId = Number(item.subcategoryId);
-      if (!Number.isInteger(subcategoryId) || subcategoryId <= 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Invalid subcategoryId for item at index ${index}. Must be a positive integer.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check quantity
-      const quantity = item.quantity;
-      if (
-        typeof quantity !== 'number' ||
-        !Number.isInteger(quantity) ||
-        quantity <= 0
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Invalid quantity for item at index ${index}. Must be a positive integer.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Prevent duplicate subcategoryId
-      if (seenSubcategoryIds.has(subcategoryId)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Duplicate subcategoryId ${subcategoryId} detected in order items.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      seenSubcategoryIds.add(subcategoryId);
-      validatedItems.push({
-        subcategoryId,
-        quantity,
-      });
+    if (!cartRows || cartRows.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Selected cart item(s) not found or do not belong to the user.',
+        },
+        { status: 404 }
+      );
     }
+
+    if (cartRows.length < cartIdList.length) {
+      const foundIds = new Set(cartRows.map((r) => Number(r.id)));
+      const missingIds = cartIdList.filter((id) => !foundIds.has(id));
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Cart item(s) with ID(s) ${missingIds.join(', ')} not found or do not belong to the user.`,
+        },
+        { status: 404 }
+      );
+    }
+
+    // 5. Map cart data into OrderItemInput
+    const validatedItems: OrderItemInput[] = cartRows.map((row) => ({
+      subcategoryId: Number(row.subcategory_id),
+      quantity: Number(row.quantity),
+    }));
 
     // Extract optional addressId / paymentMethodId
     const rawAddressId =
@@ -205,10 +185,11 @@ export async function POST(request: NextRequest) {
       body.paymentMethod?.id;
     const paymentMethodId = rawPaymentMethodId !== undefined && rawPaymentMethodId !== null ? Number(rawPaymentMethodId) : undefined;
 
-    // 6. Create order with server-calculated values and atomic stock reduction
+    // 6. Create order with server-calculated values, atomic stock reduction, and cart cleanup
     const orderData = await createOrderFromCart(userId, validatedItems, {
       addressId: Number.isFinite(addressId) ? addressId : undefined,
       paymentMethodId: Number.isFinite(paymentMethodId) ? paymentMethodId : undefined,
+      cartIds: cartIdList,
     });
 
     return NextResponse.json(

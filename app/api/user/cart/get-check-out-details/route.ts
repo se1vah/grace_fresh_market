@@ -6,12 +6,11 @@ const DEFAULT_ADDRESS_NOT_FOUND_MESSAGE =
   'Default delivery address not found. Please add or select a default address before proceeding with checkout.';
 
 /**
- * GET /api/cart/get-check-out-details (getCheckOutDetails)
+ * GET /api/user/cart/get-check-out-details (getCheckOutDetails)
  * Returns the authenticated user's default delivery address and payment methods.
  */
 export async function GET(request: NextRequest) {
   try {
-    // Deliberately omit an explicit user ID: this endpoint requires a valid JWT.
     const userId = await getUserIdFromRequest(request);
 
     if (!userId) {
