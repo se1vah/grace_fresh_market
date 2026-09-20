@@ -40,7 +40,8 @@ export default function CategoryManagementPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch categories');
+        setError(data.error || 'Failed to fetch categories');
+        return;
       }
 
       setCategories(data.data || []);

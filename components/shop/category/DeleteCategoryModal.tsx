@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { CategoryData } from './CategoryModal';
 
@@ -46,8 +46,13 @@ export default function DeleteCategoryModal({
     }
   };
 
+  const handleModalClose = () => {
+    onClose();
+    setError(null);
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-md">
+    <Modal isOpen={isOpen} onClose={handleModalClose} maxWidthClass="max-w-md">
       <div className="p-6">
         <div className="flex items-start justify-between">
           <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shrink-0">

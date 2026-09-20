@@ -47,7 +47,8 @@ export function ShopOrdersProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/shop/orders');
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch orders');
+        setError(data.error || 'Failed to fetch orders');
+        return;
       }
 
       setOrders(data.data || []);
@@ -99,7 +100,8 @@ export function ShopOrdersProvider({ children }: { children: React.ReactNode }) 
 
         const data = await res.json();
         if (!res.ok) {
-          throw new Error(data.error || 'Failed to update order status');
+          setError(data.error || 'Failed to update order status');
+          return { success: false, error: data.error || 'Failed to update status' };
         }
 
         if (typeof data.orderCount === 'number') {

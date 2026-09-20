@@ -123,7 +123,8 @@ export default function DashboardStats() {
       const res = await fetch(`/api/shop/stats?year=${year}&month=${month}`);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch statistics');
+        setError(data.error || 'Failed to fetch statistics');
+        return;
       }
       setStats({
         totalCategories: data.totalCategories || 0,
@@ -574,10 +575,10 @@ export default function DashboardStats() {
                       cy={pt.y}
                       r={isHovered ? 6 : pt.revenue > 0 ? 4 : 2.5}
                       className={`transition-all duration-150 ${isHovered
-                          ? 'fill-[#80C34A] stroke-[#1E3F1B] stroke-2'
-                          : pt.revenue > 0
-                            ? 'fill-[#2D5A27] stroke-white stroke-1'
-                            : 'fill-gray-300'
+                        ? 'fill-[#80C34A] stroke-[#1E3F1B] stroke-2'
+                        : pt.revenue > 0
+                          ? 'fill-[#2D5A27] stroke-white stroke-1'
+                          : 'fill-gray-300'
                         }`}
                     />
                   );
@@ -605,10 +606,10 @@ export default function DashboardStats() {
                       <div
                         style={{ height: `${heightPercent}%` }}
                         className={`w-full rounded-t-lg transition-all duration-300 ${isHovered
-                            ? 'bg-[#80C34A] shadow-md shadow-[#80C34A]/30 scale-105'
-                            : d.revenue > 0
-                              ? 'bg-gradient-to-t from-[#2D5A27] to-[#518b48] opacity-80 group-hover:opacity-100'
-                              : 'bg-gray-100 hover:bg-gray-200'
+                          ? 'bg-[#80C34A] shadow-md shadow-[#80C34A]/30 scale-105'
+                          : d.revenue > 0
+                            ? 'bg-gradient-to-t from-[#2D5A27] to-[#518b48] opacity-80 group-hover:opacity-100'
+                            : 'bg-gray-100 hover:bg-gray-200'
                           }`}
                       />
                     </div>

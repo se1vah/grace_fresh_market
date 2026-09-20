@@ -35,7 +35,8 @@ export default function CMSDeleteModal({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete CMS page');
+        setError(data.error || 'Failed to delete CMS page');
+        return;
       }
 
       onSuccess();

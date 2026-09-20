@@ -71,7 +71,28 @@ export default function SubCategoryModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formBodyRef = useRef<HTMLDivElement>(null);
   const isEditMode = Boolean(subCategoryToEdit && subCategoryToEdit.id);
+
+  const scrollToTop = () => {
+    const doScroll = () => {
+      if (formBodyRef.current) {
+        formBodyRef.current.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }
+    };
+
+    doScroll();
+    setTimeout(doScroll, 50);
+  };
+
+  useEffect(() => {
+    if (generalError) {
+      scrollToTop();
+    }
+  }, [generalError]);
 
   // Fetch categories for dropdown when modal opens
   useEffect(() => {
@@ -175,6 +196,7 @@ export default function SubCategoryModal({
 
     if (fileError) {
       setErrors((prev) => ({ ...prev, image: fileError }));
+      scrollToTop();
     }
 
     if (newFiles.length > 0) {
@@ -264,6 +286,7 @@ export default function SubCategoryModal({
     setGeneralError(null);
 
     if (!validateForm()) {
+      scrollToTop();
       return;
     }
 
@@ -301,6 +324,7 @@ export default function SubCategoryModal({
 
       if (!res.ok) {
         setGeneralError(data.error || 'An unexpected error occurred while saving.');
+        scrollToTop();
         return;
       }
 
@@ -309,6 +333,7 @@ export default function SubCategoryModal({
     } catch (err: any) {
       console.error('Error saving subcategory:', err);
       setGeneralError(err.message || 'An unexpected error occurred while saving.');
+      scrollToTop();
     } finally {
       setIsSubmitting(false);
     }
@@ -320,8 +345,13 @@ export default function SubCategoryModal({
       ? subCategoryToEdit.category
       : undefined);
 
+  const handleModalClose = () => {
+    setGeneralError(null);
+    onClose();
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-lg">
+    <Modal isOpen={isOpen} onClose={handleModalClose} maxWidthClass="max-w-lg">
       <div className="flex flex-col max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-3.5rem)]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[#E2EAE1] flex items-center justify-between bg-[#F9FBF9] shrink-0">
@@ -351,389 +381,387 @@ export default function SubCategoryModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           {/* Scrollable Form Body */}
-          <div className="p-6 space-y-4 font-nunito overflow-y-auto flex-1">
+          <div ref={formBodyRef} className="p-6 space-y-4 font-nunito overflow-y-auto flex-1">
             {generalError && (
               <div className="p-3.5 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 shadow-2xs animate-in fade-in zoom-in-95 duration-200">
                 <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
                 <span>{generalError}</span>
               </div>
             )}
-        {/* 1. Category Custom Dropdown with Images */}
-        <div ref={categoryDropdownRef} className="relative">
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand flex items-center justify-between">
-            <span>
-              Category <span className="text-red-500">*</span>
-            </span>
-            {selectedCategoryInfo && (
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-bold font-quicksand ${selectedCategoryInfo.status === 'active'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-red-100 text-red-800'
+            {/* 1. Category Custom Dropdown with Images */}
+            <div ref={categoryDropdownRef} className="relative">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand flex items-center justify-between">
+                <span>
+                  Category <span className="text-red-500">*</span>
+                </span>
+                {selectedCategoryInfo && (
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold font-quicksand ${selectedCategoryInfo.status === 'active'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}
+                  >
+                    {selectedCategoryInfo.status === 'active' ? 'Active' : 'Inactive'}
+                  </span>
+                )}
+              </label>
+
+              {/* Custom Dropdown Trigger Button */}
+              <button
+                type="button"
+                onClick={() => !loadingCategories && setIsCategoryDropdownOpen((prev) => !prev)}
+                disabled={loadingCategories}
+                className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm font-nunito flex items-center justify-between transition cursor-pointer text-left ${errors.category
+                  ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                  : isCategoryDropdownOpen
+                    ? 'border-[#2D5A27] ring-4 ring-[#2D5A27]/10'
+                    : 'border-[#E2EAE1] hover:border-gray-300'
                   }`}
               >
-                {selectedCategoryInfo.status === 'active' ? 'Active' : 'Inactive'}
-              </span>
-            )}
-          </label>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {selectedCategoryInfo ? (
+                    <>
+                      <div className="w-7 h-7 rounded-lg border border-[#E2EAE1] overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 shadow-2xs">
+                        {selectedCategoryInfo.image ? (
+                          <img
+                            src={selectedCategoryInfo.image}
+                            alt={selectedCategoryInfo.category_name || selectedCategoryInfo.categoryName || 'Category'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <ImageIcon className="w-3.5 h-3.5 text-gray-400" />
+                        )}
+                      </div>
+                      <span className="font-semibold text-gray-900 truncate font-quicksand text-sm">
+                        {selectedCategoryInfo.category_name || selectedCategoryInfo.categoryName}
+                      </span>
+                      {selectedCategoryInfo.category_type && (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-quicksand shrink-0">
+                          {selectedCategoryInfo.category_type}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-7 h-7 rounded-lg border border-dashed border-gray-200 bg-gray-50/60 flex items-center justify-center shrink-0">
+                        <ImageIcon className="w-3.5 h-3.5 text-gray-300" />
+                      </div>
+                      <span className="text-gray-400 font-medium font-nunito">Select Category</span>
+                    </div>
+                  )}
+                </div>
 
-          {/* Custom Dropdown Trigger Button */}
-          <button
-            type="button"
-            onClick={() => !loadingCategories && setIsCategoryDropdownOpen((prev) => !prev)}
-            disabled={loadingCategories}
-            className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm font-nunito flex items-center justify-between transition cursor-pointer text-left ${errors.category
-              ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
-              : isCategoryDropdownOpen
-                ? 'border-[#2D5A27] ring-4 ring-[#2D5A27]/10'
-                : 'border-[#E2EAE1] hover:border-gray-300'
-              }`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              {selectedCategoryInfo ? (
-                <>
-                  <div className="w-7 h-7 rounded-lg border border-[#E2EAE1] overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 shadow-2xs">
-                    {selectedCategoryInfo.image ? (
-                      <img
-                        src={selectedCategoryInfo.image}
-                        alt={selectedCategoryInfo.category_name || selectedCategoryInfo.categoryName || 'Category'}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
+                <div className="flex items-center gap-1.5 shrink-0 ml-2 text-gray-400">
+                  {loadingCategories && <Loader2 className="w-4 h-4 animate-spin text-[#2D5A27]" />}
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${isCategoryDropdownOpen ? 'rotate-180 text-[#2D5A27]' : ''
+                      }`}
+                  />
+                </div>
+              </button>
+
+              {/* Dropdown Menu Popover */}
+              {isCategoryDropdownOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-[#E2EAE1] rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  <div className="max-h-56 overflow-y-auto divide-y divide-gray-50 p-1">
+                    {categories.length === 0 ? (
+                      <div className="py-4 text-center text-xs text-gray-400 font-nunito">
+                        {loadingCategories ? 'Loading categories...' : 'No categories available'}
+                      </div>
                     ) : (
-                      <ImageIcon className="w-3.5 h-3.5 text-gray-400" />
+                      categories.map((cat) => {
+                        const isSelected = String(cat.id) === String(categoryId);
+                        const isActive = cat.status === 'active';
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              const val = String(cat.id);
+                              setCategoryId(val);
+                              const err = validateCategory(val);
+                              setErrors((prev) => ({ ...prev, category: err }));
+                              setIsCategoryDropdownOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg flex items-center justify-between text-left transition cursor-pointer group ${isSelected
+                              ? 'bg-[#EAF2EA] text-[#2D5A27]'
+                              : 'hover:bg-[#F9FBF9] text-gray-700'
+                              }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              {/* Category Thumbnail Image */}
+                              <div className="w-8 h-8 rounded-lg border border-[#E2EAE1] overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-[#2D5A27]/30 transition">
+                                {cat.image ? (
+                                  <img
+                                    src={cat.image}
+                                    alt={cat.category_name || cat.categoryName || 'Category'}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <ImageIcon className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+
+                              {/* Category Details */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm truncate font-quicksand ${isSelected ? 'font-bold text-[#2D5A27]' : 'font-semibold text-gray-800'}`}>
+                                    {cat.category_name || cat.categoryName}
+                                  </span>
+                                  {!isActive && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-100 text-red-700 font-bold font-quicksand shrink-0">
+                                      Inactive
+                                    </span>
+                                  )}
+                                </div>
+                                {cat.category_type && (
+                                  <span className="text-[10px] text-gray-400 font-nunito capitalize">
+                                    Type: {cat.category_type}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Selected Checkmark */}
+                            {isSelected && (
+                              <div className="w-5 h-5 rounded-full bg-[#2D5A27] text-white flex items-center justify-center shrink-0 ml-2 shadow-2xs">
+                                <Check className="w-3 h-3 stroke-[2.5]" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })
                     )}
                   </div>
-                  <span className="font-semibold text-gray-900 truncate font-quicksand text-sm">
-                    {selectedCategoryInfo.category_name || selectedCategoryInfo.categoryName}
-                  </span>
-                  {selectedCategoryInfo.category_type && (
-                    <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-quicksand shrink-0">
-                      {selectedCategoryInfo.category_type}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2 text-gray-400">
-                  <div className="w-7 h-7 rounded-lg border border-dashed border-gray-200 bg-gray-50/60 flex items-center justify-center shrink-0">
-                    <ImageIcon className="w-3.5 h-3.5 text-gray-300" />
-                  </div>
-                  <span className="text-gray-400 font-medium font-nunito">Select Category</span>
                 </div>
               )}
+
+              <ModernFieldError message={errors.category} />
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0 ml-2 text-gray-400">
-              {loadingCategories && <Loader2 className="w-4 h-4 animate-spin text-[#2D5A27]" />}
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  isCategoryDropdownOpen ? 'rotate-180 text-[#2D5A27]' : ''
-                }`}
+            {/* 2. SubCategory Name Input */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Item Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={subCategoryName}
+                onChange={(e) => {
+                  setSubCategoryName(e.target.value);
+                  setErrors((prev) => ({ ...prev, subcategoryName: '' }));
+                }}
+                placeholder="e.g. Organic Apples, Fresh Citrus, Leafy Greens"
+                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.subcategoryName
+                  ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                  : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                  }`}
               />
+              <ModernFieldError message={errors.subcategoryName} />
             </div>
-          </button>
 
-          {/* Dropdown Menu Popover */}
-          {isCategoryDropdownOpen && (
-            <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-[#E2EAE1] rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="max-h-56 overflow-y-auto divide-y divide-gray-50 p-1">
-                {categories.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-gray-400 font-nunito">
-                    {loadingCategories ? 'Loading categories...' : 'No categories available'}
-                  </div>
-                ) : (
-                  categories.map((cat) => {
-                    const isSelected = String(cat.id) === String(categoryId);
-                    const isActive = cat.status === 'active';
-                    return (
+            {/* 3. Multi-Image Upload & Preview Grid */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Item Images <span className="text-red-500">*</span>
+              </label>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {/* Existing & New Images Preview Grid */}
+              {(existingImages.length > 0 || filePreviews.length > 0) && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+                  {/* Existing Images */}
+                  {existingImages.map((imgUrl, idx) => (
+                    <div key={`existing-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-[#E2EAE1] bg-gray-50 shadow-2xs">
+                      <img src={imgUrl} alt={`Existing image ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
-                        key={cat.id}
                         type="button"
-                        onClick={() => {
-                          const val = String(cat.id);
-                          setCategoryId(val);
-                          const err = validateCategory(val);
-                          setErrors((prev) => ({ ...prev, category: err }));
-                          setIsCategoryDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 rounded-lg flex items-center justify-between text-left transition cursor-pointer group ${
-                          isSelected
-                            ? 'bg-[#EAF2EA] text-[#2D5A27]'
-                            : 'hover:bg-[#F9FBF9] text-gray-700'
-                        }`}
+                        onClick={() => handleRemoveExistingImage(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition cursor-pointer shadow-xs"
+                        title="Remove Image"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {/* Category Thumbnail Image */}
-                          <div className="w-8 h-8 rounded-lg border border-[#E2EAE1] overflow-hidden bg-gray-50 flex items-center justify-center shrink-0 shadow-2xs group-hover:border-[#2D5A27]/30 transition">
-                            {cat.image ? (
-                              <img
-                                src={cat.image}
-                                alt={cat.category_name || cat.categoryName || 'Category'}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <ImageIcon className="w-4 h-4 text-gray-400" />
-                            )}
-                          </div>
-
-                          {/* Category Details */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-sm truncate font-quicksand ${isSelected ? 'font-bold text-[#2D5A27]' : 'font-semibold text-gray-800'}`}>
-                                {cat.category_name || cat.categoryName}
-                              </span>
-                              {!isActive && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-100 text-red-700 font-bold font-quicksand shrink-0">
-                                  Inactive
-                                </span>
-                              )}
-                            </div>
-                            {cat.category_type && (
-                              <span className="text-[10px] text-gray-400 font-nunito capitalize">
-                                Type: {cat.category_type}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Selected Checkmark */}
-                        {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-[#2D5A27] text-white flex items-center justify-center shrink-0 ml-2 shadow-2xs">
-                            <Check className="w-3 h-3 stroke-[2.5]" />
-                          </div>
-                        )}
+                        <X className="w-3.5 h-3.5" />
                       </button>
-                    );
-                  })
-                )}
+                    </div>
+                  ))}
+
+                  {/* New Selected Image Previews */}
+                  {filePreviews.map((preview, idx) => (
+                    <div key={`new-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-emerald-300 bg-emerald-50/30 shadow-2xs">
+                      <img src={preview} alt={`New image preview ${idx + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded font-quicksand">
+                        New
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNewFile(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition cursor-pointer shadow-xs"
+                        title="Remove Image"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* File Upload Box */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${errors.image
+                  ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10'
+                  : 'border-[#E2EAE1] hover:border-[#2D5A27] bg-[#F9FBF9] hover:bg-[#F2F7F2]'
+                  }`}
+              >
+                <UploadCloud className="w-7 h-7 mx-auto text-[#2D5A27] mb-1.5" />
+                <div className="text-xs font-bold text-gray-700 font-quicksand">
+                  Click to select / upload multiple images
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5">
+                  JPG, JPEG, PNG or WEBP (Max 5MB each)
+                </div>
+              </div>
+              <ModernFieldError message={errors.image} />
+            </div>
+
+            {/* 4. Status Toggle */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatus('active')}
+                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${status === 'active'
+                    ? 'bg-emerald-50 border-emerald-600 text-emerald-800 ring-2 ring-emerald-600/20'
+                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  Active
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatus('inactive')}
+                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${status === 'inactive'
+                    ? 'bg-gray-100 border-gray-500 text-gray-800 ring-2 ring-gray-400/20'
+                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                  Inactive
+                </button>
               </div>
             </div>
-          )}
 
-          <ModernFieldError message={errors.category} />
-        </div>
-
-        {/* 2. SubCategory Name Input */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Item Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={subCategoryName}
-            onChange={(e) => {
-              setSubCategoryName(e.target.value);
-              setErrors((prev) => ({ ...prev, subcategoryName: '' }));
-            }}
-            placeholder="e.g. Organic Apples, Fresh Citrus, Leafy Greens"
-            className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.subcategoryName
-              ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
-              : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
-              }`}
-          />
-          <ModernFieldError message={errors.subcategoryName} />
-        </div>
-
-        {/* 3. Multi-Image Upload & Preview Grid */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Item Images <span className="text-red-500">*</span>
-          </label>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          {/* Existing & New Images Preview Grid */}
-          {(existingImages.length > 0 || filePreviews.length > 0) && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
-              {/* Existing Images */}
-              {existingImages.map((imgUrl, idx) => (
-                <div key={`existing-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-[#E2EAE1] bg-gray-50 shadow-2xs">
-                  <img src={imgUrl} alt={`Existing image ${idx + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveExistingImage(idx)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition cursor-pointer shadow-xs"
-                    title="Remove Image"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-
-              {/* New Selected Image Previews */}
-              {filePreviews.map((preview, idx) => (
-                <div key={`new-${idx}`} className="relative group aspect-square rounded-xl overflow-hidden border border-emerald-300 bg-emerald-50/30 shadow-2xs">
-                  <img src={preview} alt={`New image preview ${idx + 1}`} className="w-full h-full object-cover" />
-                  <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded font-quicksand">
-                    New
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveNewFile(idx)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition cursor-pointer shadow-xs"
-                    title="Remove Image"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* File Upload Box */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${errors.image
-              ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10'
-              : 'border-[#E2EAE1] hover:border-[#2D5A27] bg-[#F9FBF9] hover:bg-[#F2F7F2]'
-              }`}
-          >
-            <UploadCloud className="w-7 h-7 mx-auto text-[#2D5A27] mb-1.5" />
-            <div className="text-xs font-bold text-gray-700 font-quicksand">
-              Click to select / upload multiple images
-            </div>
-            <div className="text-[11px] text-gray-400 mt-0.5">
-              JPG, JPEG, PNG or WEBP (Max 5MB each)
-            </div>
-          </div>
-          <ModernFieldError message={errors.image} />
-        </div>
-
-        {/* 4. Status Toggle */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Status <span className="text-red-500">*</span>
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setStatus('active')}
-              className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${status === 'active'
-                ? 'bg-emerald-50 border-emerald-600 text-emerald-800 ring-2 ring-emerald-600/20'
-                : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
-                }`}
-            >
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-              Active
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStatus('inactive')}
-              className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${status === 'inactive'
-                ? 'bg-gray-100 border-gray-500 text-gray-800 ring-2 ring-gray-400/20'
-                : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
-                }`}
-            >
-              <X className="w-4 h-4 text-gray-500" />
-              Inactive
-            </button>
-          </div>
-        </div>
-
-        {/* 5. Stock Input (Optional, numbers only) */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Stock <span className="text-gray-400 font-normal lowercase">(optional)</span>
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={stock}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '' || /^\d+$/.test(val)) {
-                setStock(val);
-                setErrors((prev) => ({ ...prev, stock: '' }));
-              }
-            }}
-            placeholder="e.g. 50"
-            className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.stock
-              ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
-              : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
-              }`}
-          />
-          <ModernFieldError message={errors.stock} />
-        </div>
-
-        {/* 6. Amount Input */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Amount (₹) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 font-bold text-sm">
-              ₹
-            </div>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                setErrors((prev) => ({ ...prev, amount: '' }));
-              }}
-              placeholder="e.g. 5000"
-              className={`w-full pl-8 pr-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.amount
-                ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
-                : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
-                }`}
-            />
-          </div>
-          <ModernFieldError message={errors.amount} />
-        </div>
-
-        {/* 7. Offer Percentage Input (Optional, percentage between 0 and 100) */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-            Offer (%) <span className="text-gray-400 font-normal lowercase">(optional)</span>
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={offer}
-              onChange={(e) => {
-                const val = e.target.value;
-                setOffer(val);
-                if (val.trim() !== '') {
-                  const num = Number(val);
-                  if (isNaN(num) || num < 0 || num > 100) {
-                    setErrors((prev) => ({ ...prev, offer: 'Offer percentage must be between 0 and 100.' }));
-                  } else {
-                    setErrors((prev) => ({ ...prev, offer: '' }));
+            {/* 5. Stock Input (Optional, numbers only) */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Stock <span className="text-gray-400 font-normal lowercase">(optional)</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={stock}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d+$/.test(val)) {
+                    setStock(val);
+                    setErrors((prev) => ({ ...prev, stock: '' }));
                   }
-                } else {
-                  setErrors((prev) => ({ ...prev, offer: '' }));
-                }
-              }}
-              placeholder="e.g. 10"
-              className={`w-full pl-4 pr-14 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.offer
-                ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
-                : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
-                }`}
-            />
-            <div className="absolute inset-y-1 right-1 px-3 flex items-center justify-center pointer-events-none bg-amber-500 text-white font-bold text-xs font-quicksand rounded-lg shadow-2xs">
-              %
+                }}
+                placeholder="e.g. 50"
+                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.stock
+                  ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                  : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                  }`}
+              />
+              <ModernFieldError message={errors.stock} />
             </div>
-          </div>
-          <ModernFieldError message={errors.offer} />
-        </div>
+
+            {/* 6. Amount Input */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Amount (₹) <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 font-bold text-sm">
+                  ₹
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setErrors((prev) => ({ ...prev, amount: '' }));
+                  }}
+                  placeholder="e.g. 5000"
+                  className={`w-full pl-8 pr-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.amount
+                    ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                    : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                    }`}
+                />
+              </div>
+              <ModernFieldError message={errors.amount} />
+            </div>
+
+            {/* 7. Offer Percentage Input (Optional, percentage between 0 and 100) */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Offer (%) <span className="text-gray-400 font-normal lowercase">(optional)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={offer}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setOffer(val);
+                    if (val.trim() !== '') {
+                      const num = Number(val);
+                      if (isNaN(num) || num < 0 || num > 100) {
+                        setErrors((prev) => ({ ...prev, offer: 'Offer percentage must be between 0 and 100.' }));
+                      } else {
+                        setErrors((prev) => ({ ...prev, offer: '' }));
+                      }
+                    } else {
+                      setErrors((prev) => ({ ...prev, offer: '' }));
+                    }
+                  }}
+                  placeholder="e.g. 10"
+                  className={`w-full pl-4 pr-14 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.offer
+                    ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                    : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                    }`}
+                />
+                <div className="absolute inset-y-1 right-1 px-3 flex items-center justify-center pointer-events-none bg-amber-500 text-white font-bold text-xs font-quicksand rounded-lg shadow-2xs">
+                  %
+                </div>
+              </div>
+              <ModernFieldError message={errors.offer} />
+            </div>
 
           </div>
 

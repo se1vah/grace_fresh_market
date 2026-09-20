@@ -72,7 +72,8 @@ export default function SubCategoryManagementPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error || 'Failed to fetch subcategories');
+          setError(data.error || 'Failed to fetch subcategories');
+          return;
         }
 
         setSubCategories(data.data || []);

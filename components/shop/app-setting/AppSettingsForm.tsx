@@ -48,7 +48,8 @@ export default function AppSettingsForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to load app settings');
+        setServerError(data.error || 'Failed to load app settings');
+        return;
       }
 
       if (data.success && data.data) {
@@ -156,7 +157,8 @@ export default function AppSettingsForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to save settings');
+        setServerError(data.error || 'Failed to save settings');
+        return;
       }
 
       setToastMessage(data.message || 'App settings updated successfully!');

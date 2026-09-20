@@ -44,7 +44,8 @@ export default function CustomerManagementPage() {
       const res = await fetch('/api/shop/customers', { cache: 'no-store' });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error ${res.status}`);
+        setError(errorData.error || `HTTP error ${res.status}`);
+        return;
       }
       const data = await res.json();
       setCustomers(data.data || []);

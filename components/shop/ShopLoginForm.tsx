@@ -50,7 +50,6 @@ export default function ShopLoginForm() {
 
       if (!res.ok) {
         setErrorMessage(data.error || 'Invalid email or password');
-        setIsLoading(false);
         return;
       }
 
@@ -67,16 +66,16 @@ export default function ShopLoginForm() {
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-gradient-to-b from-[#F2F7F2] via-[#F9FBF9] to-[#EAF2EA]">
       {/* Container Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#E2EAE1] overflow-hidden transition-all duration-300">
-        
+
         {/* Header Branding */}
         <div className="bg-gradient-to-r from-[#2D5A27] to-[#1E3F1B] px-8 py-8 text-center text-white relative overflow-hidden">
           <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#80C34A]/20 rounded-full blur-xl pointer-events-none" />
           <div className="absolute -left-6 -top-6 w-24 h-24 bg-[#80C34A]/20 rounded-full blur-xl pointer-events-none" />
-          
+
           <div className="inline-flex items-center justify-center p-2.5 bg-white rounded-2xl mb-3 shadow-md border border-white/20 w-16 h-16 overflow-hidden">
             <img src="/logo.png" alt="Grace Fresh Logo" className="w-full h-full object-contain" />
           </div>
-          
+
           <h1 className="text-2xl font-bold font-quicksand tracking-tight text-white">
             Grace Fresh Shop
           </h1>
@@ -88,7 +87,7 @@ export default function ShopLoginForm() {
         {/* Form Body */}
         <div className="p-8">
           {errorMessage && (
-            <div 
+            <div
               role="alert"
               className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-700 text-sm animate-shake"
             >
@@ -100,8 +99,8 @@ export default function ShopLoginForm() {
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {/* Email Field */}
             <div>
-              <label 
-                htmlFor="shop-email" 
+              <label
+                htmlFor="shop-email"
                 className="block text-xs font-bold uppercase tracking-wider text-[#2D5A27] mb-2 font-nunito"
               >
                 Email Address
@@ -127,8 +126,8 @@ export default function ShopLoginForm() {
 
             {/* Password Field */}
             <div>
-              <label 
-                htmlFor="shop-password" 
+              <label
+                htmlFor="shop-password"
                 className="block text-xs font-bold uppercase tracking-wider text-[#2D5A27] mb-2 font-nunito"
               >
                 Password
