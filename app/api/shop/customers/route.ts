@@ -207,7 +207,12 @@ export async function GET(request: NextRequest) {
       const defaultAddr = userAddresses.find((a) => a.isDefault) || userAddresses[0] || null;
 
       const totalOrders = userOrders.length;
-      const totalSpent = userOrders.reduce((sum, ord) => sum + (Number(ord.total) || 0), 0);
+      const totalSpent = userOrders
+        .filter((ord) => {
+          const s = (ord.status || '').toLowerCase().trim();
+          return s !== 'cancelled' && s !== 'canceled';
+        })
+        .reduce((sum, ord) => sum + (Number(ord.total) || 0), 0);
       const lastOrder = userOrders[0] || null;
 
       return {

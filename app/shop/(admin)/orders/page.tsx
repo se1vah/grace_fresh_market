@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { 
-  ShoppingBag, 
-  Clock, 
-  Package, 
-  Truck, 
-  CheckCircle2, 
-  Ban, 
-  TrendingUp, 
+import {
+  ShoppingBag,
+  Clock,
+  Package,
+  Truck,
+  CheckCircle2,
+  Ban,
+  TrendingUp,
   RefreshCw,
   Sparkles,
   Layers
@@ -34,13 +34,17 @@ export default function OrdersManagementPage() {
 
     for (const order of orders) {
       const s = (order.orderStatus?.status || 'ordered').toLowerCase().trim();
-      totalRevenue += Number(order.total || 0);
+      const isCancelled = s === 'cancelled' || s === 'canceled';
+
+      if (!isCancelled) {
+        totalRevenue += Number(order.total || 0);
+      }
 
       if (s === 'ordered' || s === 'orderd') ordered++;
       else if (s === 'packed') packed++;
       else if (s === 'out for delivery') outForDelivery++;
       else if (s === 'delivered' || s === 'deliverd') delivered++;
-      else if (s === 'cancelled') cancelled++;
+      else if (isCancelled) cancelled++;
     }
 
     return {
@@ -179,7 +183,7 @@ export default function OrdersManagementPage() {
           <div className="text-lg sm:text-xl font-black font-quicksand text-[#2D5A27] truncate">
             ₹{stats.totalRevenue.toFixed(0)}
           </div>
-          <div className="text-[11px] text-gray-500 font-medium">Total volume</div>
+          <div className="text-[11px] text-gray-500 font-medium">Excl. cancelled</div>
         </div>
       </div>
 
@@ -191,19 +195,17 @@ export default function OrdersManagementPage() {
             <button
               key={tab.id}
               onClick={() => setSelectedStatus(tab.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold font-quicksand whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
-                isActive
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold font-quicksand whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${isActive
                   ? 'bg-[#2D5A27] text-white shadow-xs shadow-[#2D5A27]/20'
                   : 'bg-white border border-[#E2EAE1] text-gray-600 hover:bg-[#F2F7F2] hover:text-[#2D5A27]'
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
               <span
-                className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
-                  isActive
+                className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${isActive
                     ? 'bg-white/20 text-white'
                     : tab.badgeClass || 'bg-gray-100 text-gray-600'
-                }`}
+                  }`}
               >
                 {tab.count}
               </span>
@@ -220,10 +222,6 @@ export default function OrdersManagementPage() {
           onSearch={(val) => setSearch(val)}
           className="max-w-xl"
         />
-
-        <div className="text-xs font-semibold text-gray-400 px-2 sm:px-0 self-end sm:self-auto">
-          Showing orders updated in real-time via Socket.IO
-        </div>
       </div>
 
       {/* Orders Table & Modals */}

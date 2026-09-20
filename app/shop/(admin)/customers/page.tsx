@@ -231,7 +231,7 @@ export default function CustomerManagementPage() {
           <div className="text-2xl sm:text-3xl font-black font-quicksand text-[#2D5A27] truncate">
             ₹{stats.totalLifetimeSpent.toFixed(0)}
           </div>
-          <div className="text-xs text-gray-500 font-medium">Total customer sales volume</div>
+          <div className="text-xs text-gray-500 font-medium">Excl. cancelled orders</div>
         </div>
       </div>
 
