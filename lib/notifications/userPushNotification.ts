@@ -104,7 +104,7 @@ export async function userPushNotification(
   try {
     // 1. Fetch the last/most recent active FCM token from userLogin table for this user
     const userLogins = await query<any[]>(
-      'SELECT id, fcmToken FROM userLogin WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+      'SELECT id, fcmToken FROM userLogin WHERE user_id = ? AND fcmToken IS NOT NULL AND TRIM(fcmToken) != "expired" ORDER BY id DESC LIMIT 1',
       [parsedUserId]
     );
     if (!userLogins || userLogins.length === 0) {

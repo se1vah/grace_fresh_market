@@ -1,11 +1,20 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { query } from '@/lib/db';
 import { USER_COOKIE_NAME } from '@/lib/auth/user-jwt';
+import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Get token from cookie or Authorization header
     let token = request.cookies.get(USER_COOKIE_NAME)?.value;
+    const authenticatedUserId = await getUserIdFromRequest(request);
+
+    if (authenticatedUserId) {
+      await query(
+        'UPDATE userLogin SET fcmToken = "expired" WHERE user_id = ?',
+        [authenticatedUserId]
+      );
+    }
 
     if (!token) {
       const authHeader = request.headers.get('authorization');
