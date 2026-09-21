@@ -148,7 +148,7 @@ export default function OrdersManagementPage() {
         <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 shadow-2xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 font-quicksand">
-              On the Way
+              Out for Delivery
             </span>
             <Truck className="w-3.5 h-3.5 text-purple-600" />
           </div>
@@ -196,15 +196,15 @@ export default function OrdersManagementPage() {
               key={tab.id}
               onClick={() => setSelectedStatus(tab.id)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold font-quicksand whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${isActive
-                  ? 'bg-[#2D5A27] text-white shadow-xs shadow-[#2D5A27]/20'
-                  : 'bg-white border border-[#E2EAE1] text-gray-600 hover:bg-[#F2F7F2] hover:text-[#2D5A27]'
+                ? 'bg-[#2D5A27] text-white shadow-xs shadow-[#2D5A27]/20'
+                : 'bg-white border border-[#E2EAE1] text-gray-600 hover:bg-[#F2F7F2] hover:text-[#2D5A27]'
                 }`}
             >
               <span>{tab.label}</span>
               <span
                 className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${isActive
-                    ? 'bg-white/20 text-white'
-                    : tab.badgeClass || 'bg-gray-100 text-gray-600'
+                  ? 'bg-white/20 text-white'
+                  : tab.badgeClass || 'bg-gray-100 text-gray-600'
                   }`}
               >
                 {tab.count}
