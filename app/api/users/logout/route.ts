@@ -6,28 +6,12 @@ import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 export async function POST(request: NextRequest) {
   try {
     // 1. Get token from cookie or Authorization header
-    let token = request.cookies.get(USER_COOKIE_NAME)?.value;
     const authenticatedUserId = await getUserIdFromRequest(request);
 
     if (authenticatedUserId) {
       await query(
         'UPDATE userLogin SET fcmToken = "expired" WHERE user_id = ?',
         [authenticatedUserId]
-      );
-    }
-
-    if (!token) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
-        token = authHeader.substring(7).trim();
-      }
-    }
-
-    // 2. If token exists, remove it from `userLogin` table
-    if (token) {
-      await query(
-        'DELETE FROM userLogin WHERE token = ?',
-        [token]
       );
     }
 
