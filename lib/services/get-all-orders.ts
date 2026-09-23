@@ -589,7 +589,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         item.categoryType,
         categoryMap
       );
-
+      console.log("____", { useLiveSub, liveSub })
       const subcategory: OrderSubcategory = useLiveSub
         ? {
           id: liveSub.id,
