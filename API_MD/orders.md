@@ -3,6 +3,7 @@
 Comprehensive documentation for all user order endpoints:
 1. **Create Order from Cart** (`POST /api/user/orders/create` / `POST /api/users/orders/create`)
 2. **Get All Orders** (`GET /api/user/orders/get-all` / `GET /api/users/orders/get-all`)
+3. **Get Order by ID** (`GET /api/user/orders/[id]` / `GET /api/users/orders/[id]`)
 
 ---
 
@@ -549,7 +550,226 @@ Images are loaded from `subcategory_images` for each item's `subcategoryId`.
 ---
 ---
 
-# 3. Database Schema Notes
+# 3. GET `/api/users/orders/[id]` — `getOrderById`
+
+Fetches complete details for a single order by its ID, including payment method, delivery address snapshot, current order status, complete status history, order items (with live category/subcategory fallbacks and images), and stored cart summary.
+
+Supports both numeric IDs (`101`) and `#GFM-` formatted strings (`#GFM-101`).
+
+### Endpoints
+- **Dynamic Path**:
+  - `GET /api/users/orders/:id`
+  - `GET /api/user/orders/:id`
+  - `GET /api/shop/orders/:id` *(Shop admin management)*
+- **Query Parameter Alternative**:
+  - `GET /api/users/orders/get-by-id?orderId=:id`
+  - `GET /api/user/orders/get-by-id?orderId=:id`
+
+---
+
+### Authentication
+
+1. **User Request (Customer)**:
+   - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
+   - **Option B**: Pass `userId` or `user_id` as a URL query parameter.
+   - If a JWT is present and `userId` is also supplied in query, they must match.
+   - **Ownership Check**: A user can only view their own orders. Attempting to view another user's order returns `403 Forbidden`.
+
+2. **Shop Admin Request**:
+   - Send `shop_token` HTTP-only Cookie or `Authorization: Bearer <shop_token>`.
+   - Shop admins are authorized to view any order in the system.
+
+---
+
+### Parameters
+
+#### URL Route Parameters (for `[id]` routes)
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `number \| string` | **Yes** | Order ID (e.g. `101` or `#GFM-101`). |
+
+#### Query Parameters (optional for `[id]`, required for `get-by-id`)
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `orderId` / `id` | `number \| string` | Required on `get-by-id` | Order ID (e.g. `101` or `#GFM-101`). |
+| `userId` / `user_id` | `number` | Optional | User ID (required if user JWT is not present). |
+
+---
+
+### Example Requests
+
+#### Using Dynamic Route:
+```http
+GET /api/users/orders/101
+Authorization: Bearer <token>
+```
+
+#### Using Query Route:
+```http
+GET /api/user/orders/get-by-id?orderId=101
+Authorization: Bearer <token>
+```
+
+#### Using Formatted ID:
+```http
+GET /api/user/orders/%23GFM-101
+Authorization: Bearer <token>
+```
+
+---
+
+### Example Successful Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Order retrieved successfully",
+  "data": {
+    "id": 101,
+    "userId": 3,
+    "user": {
+      "id": 3,
+      "fullName": "John Doe",
+      "email": "john@example.com",
+      "phoneNumber": "9876543210",
+      "profileImage": null
+    },
+    "subTotal": 25,
+    "totalItems": 3,
+    "deliveryFee": 40,
+    "total": 65,
+    "paymentMethodId": 1,
+    "paymentMethod": {
+      "id": 1,
+      "paymentType": "COD",
+      "description": "Pay when your fresh produce arrives at your door. We accept exact cash or card via our driver's terminal."
+    },
+    "address": {
+      "id": 12,
+      "building_name": "Flat 4B, Sunrise Apts",
+      "street_name": "12 Gandhi Road",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600001",
+      "address_type": "home"
+    },
+    "orderStatus": {
+      "id": 501,
+      "orderId": 101,
+      "status": "out for delivery",
+      "createdAt": "2026-03-29T10:45:00.000Z",
+      "updatedAt": "2026-03-29T11:00:00.000Z"
+    },
+    "statusHistory": [
+      {
+        "id": 499,
+        "orderId": 101,
+        "status": "ordered",
+        "createdAt": "2026-03-29T10:00:00.000Z",
+        "updatedAt": "2026-03-29T10:00:00.000Z"
+      },
+      {
+        "id": 500,
+        "orderId": 101,
+        "status": "packed",
+        "createdAt": "2026-03-29T10:30:00.000Z",
+        "updatedAt": "2026-03-29T10:30:00.000Z"
+      },
+      {
+        "id": 501,
+        "orderId": 101,
+        "status": "out for delivery",
+        "createdAt": "2026-03-29T10:45:00.000Z",
+        "updatedAt": "2026-03-29T11:00:00.000Z"
+      }
+    ],
+    "items": [
+      {
+        "id": 201,
+        "categoryId": 1,
+        "subcategoryId": 5,
+        "quantity": 2,
+        "itemTotal": 50,
+        "subcategory": {
+          "id": 5,
+          "subcategoryName": "Tomato Local",
+          "amount": 25,
+          "images": [
+            "/images/subcategory/tomato-local-1.png"
+          ],
+          "category": {
+            "id": 1,
+            "categoryName": "Vegetables",
+            "categoryType": "gram",
+            "status": "active"
+          }
+        },
+        "createdAt": "2026-03-29T10:00:00.000Z",
+        "updatedAt": "2026-03-29T10:00:00.000Z"
+      }
+    ],
+    "cartSummary": {
+      "totalItems": 3,
+      "itemCount": 1,
+      "totalAmount": 25,
+      "deliveryFee": 40,
+      "total": 65
+    }
+    },
+    "createdAt": "2026-03-29T10:00:00.000Z",
+    "updatedAt": "2026-03-29T11:00:00.000Z"
+  }
+}
+```
+
+---
+
+### Error Responses
+
+#### `400 Bad Request` — invalid order ID
+```json
+{
+  "success": false,
+  "error": "Invalid order ID. Must be a positive integer or formatted as #GFM-123."
+}
+```
+
+#### `401 Unauthorized` — unauthenticated request
+```json
+{
+  "success": false,
+  "error": "User identification required. Please log in or provide a valid user ID."
+}
+```
+
+#### `403 Forbidden` — attempting to access another user's order
+```json
+{
+  "success": false,
+  "error": "You are not authorized to access this order."
+}
+```
+
+#### `404 Not Found` — order does not exist
+```json
+{
+  "success": false,
+  "error": "Order #999 not found."
+}
+```
+
+#### `500 Internal Server Error` — unexpected server error
+```json
+{
+  "success": false,
+  "error": "Failed to retrieve order"
+}
+```
+
+---
+---
+
+# 4. Database Schema Notes
 
 - **`` `Order` `` (and `orders` view) table**:
   - `id` (`INT AUTO_INCREMENT PRIMARY KEY`)

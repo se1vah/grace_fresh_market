@@ -26,6 +26,9 @@ export interface OrderAddress {
   state: string;
   pincode: string;
   address_type: string;
+  buildingName?: string;
+  streetName?: string;
+  addressType?: string;
 }
 
 export interface OrderCategory {
@@ -59,6 +62,7 @@ export interface CartSummary {
   itemCount: number;
   totalAmount: number;
   deliveryFee: number;
+  total: number;
 }
 
 export interface OrderUserInfo {
@@ -186,7 +190,16 @@ function isNonEmptyString(value: unknown): boolean {
 
 function publicFileExists(imageUrl: string): boolean {
   const trimmed = imageUrl.trim();
-  if (!trimmed || trimmed.includes('..')) {
+  if (!trimmed) {
+    return false;
+  }
+
+  // Remote URLs (e.g. Vercel Blob) are considered valid directly
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return true;
+  }
+
+  if (trimmed.includes('..')) {
     return false;
   }
 
@@ -204,14 +217,24 @@ function resolveSubcategoryImages(urls: string[]): string[] {
 }
 
 function formatLiveAddress(row: AddressRow): OrderAddress {
+  const building_name = row.building_name || '';
+  const street_name = row.street_name || '';
+  const city = row.city || '';
+  const state = row.state || '';
+  const pincode = row.pincode || '';
+  const address_type = row.address_type || '';
+
   return {
     id: row.id,
-    building_name: row.building_name || '',
-    street_name: row.street_name || '',
-    city: row.city || '',
-    state: row.state || '',
-    pincode: row.pincode || '',
-    address_type: row.address_type || '',
+    building_name,
+    street_name,
+    city,
+    state,
+    pincode,
+    address_type,
+    buildingName: building_name,
+    streetName: street_name,
+    addressType: address_type,
   };
 }
 
@@ -230,14 +253,24 @@ function formatSnapshotAddress(order: OrderRow): OrderAddress | null {
     return null;
   }
 
+  const building_name = order.building_name || '';
+  const street_name = order.street_name || '';
+  const city = order.city || '';
+  const state = order.state || '';
+  const pincode = order.pincode || '';
+  const address_type = order.address_type || '';
+
   return {
     id: order.addressid ?? null,
-    building_name: order.building_name || '',
-    street_name: order.street_name || '',
-    city: order.city || '',
-    state: order.state || '',
-    pincode: order.pincode || '',
-    address_type: order.address_type || '',
+    building_name,
+    street_name,
+    city,
+    state,
+    pincode,
+    address_type,
+    buildingName: building_name,
+    streetName: street_name,
+    addressType: address_type,
   };
 }
 
@@ -267,12 +300,26 @@ function resolveCategory(
 
 export interface GetAllOrdersOptions {
   userId?: number;
+  orderId?: number;
 }
 
 export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserOrder[]> {
   const userId = options?.userId;
-  const whereClause = userId !== undefined ? 'WHERE userId = ?' : '';
-  const params = userId !== undefined ? [userId] : [];
+  const orderId = options?.orderId;
+  const conditions: string[] = [];
+  const params: (number | string)[] = [];
+
+  if (userId !== undefined) {
+    conditions.push('userId = ?');
+    params.push(userId);
+  }
+
+  if (orderId !== undefined) {
+    conditions.push('id = ?');
+    params.push(orderId);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const orders = await query<OrderRow[]>(
     `SELECT
@@ -604,4 +651,12 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
 
 export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> {
   return getAllOrders({ userId });
+}
+
+export async function getOrderById(
+  orderId: number,
+  options?: { userId?: number }
+): Promise<UserOrder | null> {
+  const orders = await getAllOrders({ orderId, userId: options?.userId });
+  return orders.length > 0 ? orders[0] : null;
 }
