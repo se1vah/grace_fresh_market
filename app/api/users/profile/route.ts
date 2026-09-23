@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadFile, deleteFile } from '@/lib/blob';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -153,28 +152,15 @@ export async function POST(request: NextRequest) {
       else if (imageFile.type.includes('jpeg') || imageFile.type.includes('jpg')) ext = 'jpg';
 
       const filename = `user-${userId}-${Date.now()}.${ext}`;
-      const uploadDir = path.join(process.cwd(), 'public', 'images', 'profile');
 
-      // Ensure upload directory exists
-      await fs.mkdir(uploadDir, { recursive: true });
+      // Upload to Vercel Blob inside "profile" folder
+      const blob = await uploadFile(imageFile, filename, { folder: 'profile' });
+      newPublicImagePath = blob.url;
 
-      const newFilePath = path.join(uploadDir, filename);
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      await fs.writeFile(newFilePath, buffer);
-
-      newPublicImagePath = `/images/profile/${filename}`;
-
-      // DELETE OLD PROFILE PHOTO FILE FROM SERVER DISK IF IT EXISTS
+      // Delete old profile photo if it exists (handles Vercel Blob and legacy local files)
       const oldProfileImage = existingUser.profileImage;
-      if (oldProfileImage && typeof oldProfileImage === 'string' && oldProfileImage.startsWith('/images/profile/')) {
-        try {
-          const oldFilePath = path.join(process.cwd(), 'public', oldProfileImage);
-          await fs.unlink(oldFilePath).catch((err) => {
-            console.warn('Old profile photo could not be deleted or was missing:', err?.message || err);
-          });
-        } catch (unlinkErr) {
-          console.warn('Failed to delete old profile photo:', unlinkErr);
-        }
+      if (oldProfileImage && oldProfileImage !== newPublicImagePath) {
+        await deleteFile(oldProfileImage);
       }
     }
 

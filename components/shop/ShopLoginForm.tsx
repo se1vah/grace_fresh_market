@@ -58,6 +58,7 @@ export default function ShopLoginForm() {
       router.refresh();
     } catch (err) {
       setErrorMessage('An unexpected network error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };

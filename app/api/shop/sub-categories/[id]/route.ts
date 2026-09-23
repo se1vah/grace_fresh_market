@@ -3,8 +3,7 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { getActiveOrderForSubcategory } from '@/lib/services/order-status-check';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadFile, deleteFile } from '@/lib/blob';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -17,17 +16,6 @@ function sanitizeSlug(text: string): string {
     .replace(/^-+|-+$/g, '') || 'subcategory';
 }
 
-async function safeRemoveImageFile(imagePath: string) {
-  if (imagePath && imagePath.startsWith('/images/subcategory/')) {
-    const filename = imagePath.replace('/images/subcategory/', '');
-    const absolutePath = path.join(process.cwd(), 'public', 'images', 'subcategory', filename);
-    try {
-      await fs.unlink(absolutePath);
-    } catch (err) {
-      // Ignore if file doesn't exist or already removed
-    }
-  }
-}
 
 function formatSubCategoryRow(row: any, imagesList: string[] = []) {
   return {
@@ -253,12 +241,14 @@ export async function PUT(
 
     // Identify images removed by user
     const removedImages = currentDbImages.filter((img) => !existingImagesList.includes(img));
-    for (const removedImg of removedImages) {
-      await safeRemoveImageFile(removedImg);
-      await query(
-        'DELETE FROM subcategory_images WHERE subcategory_id = ? AND image_url = ?',
-        [subCategoryId, removedImg]
-      );
+    if (removedImages.length > 0) {
+      await deleteFile(removedImages);
+      for (const removedImg of removedImages) {
+        await query(
+          'DELETE FROM subcategory_images WHERE subcategory_id = ? AND image_url = ?',
+          [subCategoryId, removedImg]
+        );
+      }
     }
 
     // Save new files uploaded
@@ -288,25 +278,24 @@ export async function PUT(
         );
       }
 
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      let ext = '.jpg';
+      if (file.type.includes('png')) ext = '.png';
+      else if (file.type.includes('webp')) ext = '.webp';
+      else if (file.type.includes('jpeg') || file.type.includes('jpg')) ext = '.jpg';
+      else if (file.name && file.name.includes('.')) ext = '.' + file.name.split('.').pop();
 
-      const ext = path.extname(file.name) || '.jpg';
       const slug = sanitizeSlug(subcategoryName);
       const filename = `${slug}-${Date.now()}-${i + 1}${ext}`;
 
-      const uploadDir = path.join(process.cwd(), 'public', 'images', 'subcategory');
-      await fs.mkdir(uploadDir, { recursive: true });
+      // Upload to Vercel Blob in 'subcategory' folder
+      const blob = await uploadFile(file, filename, { folder: 'subcategory' });
 
-      const filePath = path.join(uploadDir, filename);
-      await fs.writeFile(filePath, buffer);
-
-      savedNewImages.push(`/images/subcategory/${filename}`);
+      savedNewImages.push(blob.url);
 
       // Insert new image into subcategory_images
       await query(
         'INSERT INTO subcategory_images (subcategory_id, image_url, is_primary) VALUES (?, ?, ?)',
-        [subCategoryId, `/images/subcategory/${filename}`, 0]
+        [subCategoryId, blob.url, 0]
       );
     }
 
@@ -401,9 +390,9 @@ export async function DELETE(
     );
     const imagesToDelete = imgRows.map((r) => r.image_url);
 
-    // Clean up all image files from disk
-    for (const img of imagesToDelete) {
-      await safeRemoveImageFile(img);
+    // Clean up all image files (Vercel Blob & legacy local files)
+    if (imagesToDelete.length > 0) {
+      await deleteFile(imagesToDelete);
     }
 
     // Delete record from subcategories DB (ON DELETE CASCADE handles subcategory_images)

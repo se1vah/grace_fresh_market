@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadFile } from '@/lib/blob';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -140,14 +139,9 @@ export async function POST(request: NextRequest) {
     const slug = sanitizeSlug(categoryName);
     const filename = `${slug}-${Date.now()}.${ext}`;
 
-    const uploadDir = path.join(process.cwd(), 'public', 'images', 'category');
-    await fs.mkdir(uploadDir, { recursive: true });
-
-    const filePath = path.join(uploadDir, filename);
-    const buffer = Buffer.from(await imageFile.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
-
-    const publicImagePath = `/images/category/${filename}`;
+    // Upload to Vercel Blob in 'category' folder
+    const blob = await uploadFile(imageFile, filename, { folder: 'category' });
+    const publicImagePath = blob.url;
 
     const insertResult = await query<any>(
       'INSERT INTO categories (category_name, image, category_type, status) VALUES (?, ?, ?, ?)',

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadFile } from '@/lib/blob';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -295,20 +294,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      let ext = '.jpg';
+      if (file.type.includes('png')) ext = '.png';
+      else if (file.type.includes('webp')) ext = '.webp';
+      else if (file.type.includes('jpeg') || file.type.includes('jpg')) ext = '.jpg';
+      else if (file.name && file.name.includes('.')) ext = '.' + file.name.split('.').pop();
 
-      const ext = path.extname(file.name) || '.jpg';
       const cleanSlug = sanitizeSlug(subcategoryName);
       const filename = `${cleanSlug}-${Date.now()}-${i + 1}${ext}`;
 
-      const uploadDir = path.join(process.cwd(), 'public', 'images', 'subcategory');
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const filepath = path.join(uploadDir, filename);
-      await fs.writeFile(filepath, buffer);
-
-      savedImagePaths.push(`/images/subcategory/${filename}`);
+      // Upload to Vercel Blob in 'subcategory' folder
+      const blob = await uploadFile(file, filename, { folder: 'subcategory' });
+      savedImagePaths.push(blob.url);
     }
 
     const primaryImage = savedImagePaths[0] || '';

@@ -3,8 +3,7 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { getActiveOrderForCategory } from '@/lib/services/order-status-check';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadFile, deleteFile } from '@/lib/blob';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -17,17 +16,6 @@ function sanitizeSlug(text: string): string {
     .replace(/^-+|-+$/g, '') || 'category';
 }
 
-async function safeRemoveImageFile(imagePath: string) {
-  if (imagePath && imagePath.startsWith('/images/category/')) {
-    const filename = imagePath.replace('/images/category/', '');
-    const absolutePath = path.join(process.cwd(), 'public', 'images', 'category', filename);
-    try {
-      await fs.unlink(absolutePath);
-    } catch (err) {
-      // Ignore if file doesn't exist or already removed
-    }
-  }
-}
 
 export async function PUT(
   request: NextRequest,
@@ -128,18 +116,13 @@ export async function PUT(
       const slug = sanitizeSlug(categoryName);
       const filename = `${slug}-${Date.now()}.${ext}`;
 
-      const uploadDir = path.join(process.cwd(), 'public', 'images', 'category');
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const filePath = path.join(uploadDir, filename);
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      await fs.writeFile(filePath, buffer);
-
-      finalImagePath = `/images/category/${filename}`;
+      // Upload to Vercel Blob in 'category' folder
+      const blob = await uploadFile(imageFile, filename, { folder: 'category' });
+      finalImagePath = blob.url;
 
       // Clean up previous image file if it exists and changed
-      if (existingCategory.image !== finalImagePath) {
-        await safeRemoveImageFile(existingCategory.image);
+      if (existingCategory.image && existingCategory.image !== finalImagePath) {
+        await deleteFile(existingCategory.image);
       }
     }
 
@@ -226,8 +209,10 @@ export async function DELETE(
     // Delete record from DB
     await query('DELETE FROM categories WHERE id = ?', [categoryId]);
 
-    // Clean up image file from filesystem
-    await safeRemoveImageFile(existingCategory.image);
+    // Clean up image file via Vercel Blob helper
+    if (existingCategory.image) {
+      await deleteFile(existingCategory.image);
+    }
 
     return NextResponse.json({
       success: true,
