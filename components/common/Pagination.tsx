@@ -66,6 +66,7 @@ export default function Pagination({
       {/* Pagination Controls */}
       <div className="flex items-center gap-1.5">
         <button
+          type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           className="px-3 py-1.5 rounded-xl border border-[#E2EAE1] bg-white text-gray-700 text-xs sm:text-sm font-quicksand font-bold flex items-center gap-1 hover:bg-[#F2F7F2] hover:border-[#2D5A27] transition disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#E2EAE1] disabled:cursor-not-allowed cursor-pointer"
@@ -87,6 +88,7 @@ export default function Pagination({
             const isCurrent = p === page;
             return (
               <button
+                type="button"
                 key={p}
                 onClick={() => onPageChange(p)}
                 className={`w-8 h-8 rounded-xl font-quicksand font-bold text-xs transition cursor-pointer ${
@@ -102,6 +104,7 @@ export default function Pagination({
         </div>
 
         <button
+          type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="px-3 py-1.5 rounded-xl border border-[#E2EAE1] bg-white text-gray-700 text-xs sm:text-sm font-quicksand font-bold flex items-center gap-1 hover:bg-[#F2F7F2] hover:border-[#2D5A27] transition disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#E2EAE1] disabled:cursor-not-allowed cursor-pointer"

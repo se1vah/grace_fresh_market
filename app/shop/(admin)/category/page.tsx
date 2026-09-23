@@ -64,10 +64,15 @@ export default function CategoryManagementPage() {
   }, [page, search, loadCategories]);
 
   // Handle Search Input Change
-  const handleSearchChange = (newSearch: string) => {
-    setSearch(newSearch);
-    setPage(1); // Reset to page 1 on new search
-  };
+  const handleSearchChange = useCallback((newSearch: string) => {
+    setSearch((prev) => {
+      if (prev !== newSearch) {
+        setPage(1); // Only reset to page 1 on new search
+        return newSearch;
+      }
+      return prev;
+    });
+  }, []);
 
   // Handle Add Category Click
   const handleAddClick = () => {

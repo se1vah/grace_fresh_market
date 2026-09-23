@@ -84,15 +84,25 @@ export default function CMSDashboard() {
     loadCMSPages(page, search, statusFilter);
   }, [page, search, statusFilter, loadCMSPages]);
 
-  const handleSearchChange = (newSearch: string) => {
-    setSearch(newSearch);
-    setPage(1);
-  };
+  const handleSearchChange = useCallback((newSearch: string) => {
+    setSearch((prev) => {
+      if (prev !== newSearch) {
+        setPage(1);
+        return newSearch;
+      }
+      return prev;
+    });
+  }, []);
 
-  const handleStatusChange = (newStatus: string) => {
-    setStatusFilter(newStatus);
-    setPage(1);
-  };
+  const handleStatusChange = useCallback((newStatus: string) => {
+    setStatusFilter((prev) => {
+      if (prev !== newStatus) {
+        setPage(1);
+        return newStatus;
+      }
+      return prev;
+    });
+  }, []);
 
   const handleAddClick = () => {
     setPageToEdit(null);

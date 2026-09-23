@@ -23,6 +23,10 @@ export default function OrdersManagementPage() {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
+  const handleSearchChange = React.useCallback((val: string) => {
+    setSearch(val);
+  }, []);
+
   // Compute status counts for KPI badges and filter tabs
   const stats = useMemo(() => {
     let ordered = 0;
@@ -219,7 +223,7 @@ export default function OrdersManagementPage() {
         <SearchInput
           value={search}
           placeholder="Search by order ID, customer name, phone, email, or city..."
-          onSearch={(val) => setSearch(val)}
+          onSearch={handleSearchChange}
           className="max-w-xl"
         />
       </div>

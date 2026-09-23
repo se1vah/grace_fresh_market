@@ -37,6 +37,10 @@ export default function CustomerManagementPage() {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'with-orders' | 'no-orders'>('all');
 
+  const handleSearchChange = useCallback((val: string) => {
+    setSearch(val);
+  }, []);
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -267,7 +271,7 @@ export default function CustomerManagementPage() {
         <SearchInput
           value={search}
           placeholder="Search by customer name, email, phone, city, or street..."
-          onSearch={(val) => setSearch(val)}
+          onSearch={handleSearchChange}
           className="max-w-xl"
         />
 

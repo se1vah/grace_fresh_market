@@ -99,16 +99,26 @@ export default function SubCategoryManagementPage() {
   }, [page, search, selectedCategoryId, loadSubCategories]);
 
   // Handle Search Input Change
-  const handleSearchChange = (newSearch: string) => {
-    setSearch(newSearch);
-    setPage(1); // Reset to page 1 on new search
-  };
+  const handleSearchChange = useCallback((newSearch: string) => {
+    setSearch((prev) => {
+      if (prev !== newSearch) {
+        setPage(1); // Only reset to page 1 on new search
+        return newSearch;
+      }
+      return prev;
+    });
+  }, []);
 
   // Handle Category Filter Change
-  const handleCategoryFilterChange = (catId: string) => {
-    setSelectedCategoryId(catId);
-    setPage(1); // Reset to page 1 on category filter change
-  };
+  const handleCategoryFilterChange = useCallback((catId: string) => {
+    setSelectedCategoryId((prev) => {
+      if (prev !== catId) {
+        setPage(1); // Only reset to page 1 on category filter change
+        return catId;
+      }
+      return prev;
+    });
+  }, []);
 
   // Handle Add SubCategory Click
   const handleAddClick = () => {

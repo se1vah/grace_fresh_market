@@ -80,9 +80,16 @@ export default function CustomersTable({
     });
   }, [customers, searchQuery, selectedFilter]);
 
-  // Reset page to 1 when filters or search changes
+  // Reset page to 1 only when filters or search actually changes
+  const prevFilterRef = React.useRef({ searchQuery, selectedFilter });
   React.useEffect(() => {
-    setPage(1);
+    if (
+      prevFilterRef.current.searchQuery !== searchQuery ||
+      prevFilterRef.current.selectedFilter !== selectedFilter
+    ) {
+      prevFilterRef.current = { searchQuery, selectedFilter };
+      setPage(1);
+    }
   }, [searchQuery, selectedFilter]);
 
   // Paginated slice

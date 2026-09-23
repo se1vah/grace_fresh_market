@@ -19,24 +19,49 @@ export default function SearchInput({
   className = '',
 }: SearchInputProps) {
   const [searchTerm, setSearchTerm] = useState(value);
+  const onSearchRef = React.useRef(onSearch);
+  const lastEmittedValue = React.useRef(value);
+  const isFirstRender = React.useRef(true);
 
+  // Keep latest onSearch callback in ref so changes to onSearch reference never trigger debounced search
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  });
+
+  // Sync state if value prop changes from outside
   useEffect(() => {
     setSearchTerm(value);
+    lastEmittedValue.current = value;
   }, [value]);
 
   useEffect(() => {
+    // Prevent initial mount from triggering onSearch
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // If searchTerm hasn't actually changed from last emitted search, do nothing
+    if (searchTerm === lastEmittedValue.current) {
+      return;
+    }
+
     const handler = setTimeout(() => {
-      onSearch(searchTerm);
+      lastEmittedValue.current = searchTerm;
+      onSearchRef.current(searchTerm);
     }, debounceMs);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [searchTerm, onSearch, debounceMs]);
+  }, [searchTerm, debounceMs]);
 
   const handleClear = () => {
     setSearchTerm('');
-    onSearch('');
+    if (lastEmittedValue.current !== '') {
+      lastEmittedValue.current = '';
+      onSearchRef.current('');
+    }
   };
 
   return (
