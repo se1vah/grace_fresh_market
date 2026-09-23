@@ -604,7 +604,6 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
           images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || []),
           category,
         };
-      console.log("____", { useLiveSub, liveSub, subcategory })
 
       return {
         id: item.id,
