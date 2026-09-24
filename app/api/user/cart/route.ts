@@ -118,13 +118,16 @@ export async function fetchUserCart(userId: number) {
     };
   });
 
+  const formattedTotalAmount = Number(totalAmount.toFixed(2));
+  const effectiveDeliveryFee = formattedTotalAmount > 400 ? 0 : deliveryFee;
+
   return {
     cartItems: formattedItems,
     cartSummary: {
       totalItems,
       itemCount: formattedItems.length,
-      totalAmount: Number(totalAmount.toFixed(2)),
-      deliveryFee,
+      totalAmount: formattedTotalAmount,
+      deliveryFee: effectiveDeliveryFee,
     },
   };
 }

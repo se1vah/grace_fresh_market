@@ -59,6 +59,7 @@ Or for multiple cart items:
 - `paymentMethodId` (*Optional*): Integer ID of payment method. If omitted, default payment method is used.
 
 All amounts, item totals, delivery fee, totals, category metadata, and stock are queried directly from the `cart` and `subcategories` tables on the server.
+- **Delivery Fee Rule**: If the order total amount (`subTotal`) is greater than ₹400, the delivery fee is ₹0 (free delivery). Otherwise, the delivery fee configured in `app_settings` is applied.
 
 ---
 

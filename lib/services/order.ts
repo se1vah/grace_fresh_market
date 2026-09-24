@@ -336,8 +336,9 @@ export async function createOrderFromCart(
 
     subTotal = Number(subTotal.toFixed(2));
 
-    // Fetch delivery fee from DB inside the connection
-    const deliveryFee = await fetchDeliveryFee(connection);
+    // Fetch delivery fee from DB inside the connection (free delivery if total amount > 400)
+    const baseDeliveryFee = await fetchDeliveryFee(connection);
+    const deliveryFee = subTotal > 400 ? 0 : baseDeliveryFee;
     const total = Number((subTotal + deliveryFee).toFixed(2));
 
     // Resolve address snapshot
