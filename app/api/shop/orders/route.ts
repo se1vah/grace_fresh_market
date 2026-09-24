@@ -188,10 +188,12 @@ export async function PATCH(request: NextRequest) {
           title: notif.title,
           body: notif.body,
           url: '/orders',
+          orderId: parsedOrderId,
+          type: normalizedStatus,
           data: {
             orderId: String(parsedOrderId),
             status: normalizedStatus,
-            type: 'order_status_update',
+            type: normalizedStatus,
           },
         });
       } catch (pushErr) {

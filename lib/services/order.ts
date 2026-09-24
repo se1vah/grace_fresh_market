@@ -2,6 +2,7 @@ import mysql from 'mysql2/promise';
 import { getPool, initShopDb, query } from '@/lib/db';
 import { emitSocketEvent } from '@/lib/socket';
 import { sendShopPushNotification } from '@/lib/notifications/shopPush';
+import { userPushNotification } from '@/lib/notifications/userPushNotification';
 export {
   getActiveOrderForSubcategory,
   getActiveOrderForCategory,
@@ -601,6 +602,25 @@ export async function createOrderFromCart(
     });
   } catch (pushErr) {
     console.error('[order] Warning: Failed to send shop push notification:', pushErr);
+  }
+
+  // 12.1 Push notification for user (type: 'ordered') & store in Notification table
+  try {
+    await userPushNotification({
+      userId,
+      title: 'Order Confirmed! 🛒',
+      body: `Your order #GFM-${orderId} has been received and is being processed.`,
+      url: '/orders',
+      orderId,
+      type: 'ordered',
+      data: {
+        orderId: String(orderId),
+        status: 'ordered',
+        type: 'ordered',
+      },
+    });
+  } catch (userPushErr) {
+    console.error('[order] Warning: Failed to send user push notification:', userPushErr);
   }
 
   // 13. Fetch final images for response

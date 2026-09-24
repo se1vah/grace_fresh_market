@@ -469,6 +469,31 @@ export async function initShopDb(): Promise<void> {
 
     await activePool.query(createOrderStatusTableQuery);
 
+    const createNotificationTableQuery = `
+      CREATE TABLE IF NOT EXISTS Notification (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          userId INT NULL,
+          orderId INT NULL,
+          title VARCHAR(255) NOT NULL,
+          content TEXT NOT NULL,
+          type VARCHAR(50) NOT NULL DEFAULT 'general',
+          createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_notification_user (userId),
+          INDEX idx_notification_order (orderId),
+          INDEX idx_notification_type (type),
+          INDEX idx_notification_created (createdAt),
+          CONSTRAINT fk_notification_user
+              FOREIGN KEY (userId) REFERENCES users(id)
+              ON DELETE CASCADE,
+          CONSTRAINT fk_notification_order
+              FOREIGN KEY (orderId) REFERENCES \`Order\`(id)
+              ON DELETE SET NULL
+      );
+    `;
+
+    await activePool.query(createNotificationTableQuery);
+
     try {
       await activePool.query('ALTER TABLE `Order` DROP COLUMN grandTotal;');
     } catch {
@@ -554,6 +579,12 @@ export async function initShopDb(): Promise<void> {
 
     try {
       await activePool.query('CREATE OR REPLACE VIEW order_items AS SELECT * FROM OrderItems;');
+    } catch {
+      // View creation may fail if restricted DB permissions
+    }
+
+    try {
+      await activePool.query('CREATE OR REPLACE VIEW notifications AS SELECT * FROM Notification;');
     } catch {
       // View creation may fail if restricted DB permissions
     }

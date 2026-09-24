@@ -19,7 +19,7 @@ export interface BulkCartItemInput {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    
+
     // Extract user identification
     const rawUserId = body.user_id || body.userId;
     const userId = await getUserIdFromRequest(request, rawUserId);
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Sanitize & parse item inputs
     const parsedItems: { subcategoryId: number; quantity: number; action: 'add' | 'set' }[] = [];
-    
+
     for (let i = 0; i < rawItems.length; i++) {
       const rawItem = rawItems[i];
       const rawSubId = rawItem.subcategory_id || rawItem.subcategoryId || rawItem.product_id || rawItem.productId;
@@ -146,12 +146,12 @@ export async function POST(request: NextRequest) {
     for (const itemInput of parsedItems) {
       const subId = itemInput.subcategoryId;
       const currentQtyInCart = existingCartMap[subId] ? existingCartMap[subId].quantity : 0;
-      
+
       if (itemInput.action === 'set') {
         targetQuantities[subId] = itemInput.quantity;
       } else {
-        const baseQty = targetQuantities[subId] !== undefined 
-          ? targetQuantities[subId] 
+        const baseQty = targetQuantities[subId] !== undefined
+          ? targetQuantities[subId]
           : (mode === 'replace' ? 0 : currentQtyInCart);
         targetQuantities[subId] = baseQty + itemInput.quantity;
       }

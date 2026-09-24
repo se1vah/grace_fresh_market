@@ -1,6 +1,7 @@
 import { query } from '@/lib/db';
 import { getAdminApp } from '@/lib/notifications/shopPush';
 import { getMessaging, MulticastMessage, SendResponse } from 'firebase-admin/messaging';
+import { insertNotification } from '@/lib/services/notification';
 
 export interface UserPushNotificationPayload {
   userId: number | string;
@@ -8,6 +9,8 @@ export interface UserPushNotificationPayload {
   body: string;
   icon?: string;
   url?: string;
+  type?: string;
+  orderId?: number | string | null;
   data?: Record<string, string>;
 }
 
@@ -18,6 +21,7 @@ export interface UserPushNotificationResult {
   failureCount: number;
   error?: string;
   cleanedTokensCount?: number;
+  notificationId?: number;
 }
 
 /**
@@ -64,7 +68,15 @@ export async function userPushNotification(
   userIdOrPayload: number | string | UserPushNotificationPayload,
   titleParam?: string,
   bodyParam?: string,
-  optionsParam?: { icon?: string; url?: string; data?: Record<string, string> }
+  optionsParam?:
+    | string
+    | {
+        icon?: string;
+        url?: string;
+        type?: string;
+        orderId?: number | string | null;
+        data?: Record<string, string>;
+      }
 ): Promise<UserPushNotificationResult> {
   // Normalize arguments
   let userId: number | string;
@@ -73,6 +85,8 @@ export async function userPushNotification(
   let icon: string;
   let url: string;
   let data: Record<string, string>;
+  let type: string | undefined;
+  let orderId: number | string | null | undefined;
 
   if (typeof userIdOrPayload === 'object' && userIdOrPayload !== null) {
     userId = userIdOrPayload.userId;
@@ -81,13 +95,25 @@ export async function userPushNotification(
     icon = userIdOrPayload.icon || '/logo.png';
     url = userIdOrPayload.url || '/orders';
     data = userIdOrPayload.data || {};
+    type = userIdOrPayload.type;
+    orderId = userIdOrPayload.orderId;
   } else {
     userId = userIdOrPayload;
     title = titleParam || '';
     body = bodyParam || '';
-    icon = optionsParam?.icon || '/logo.png';
-    url = optionsParam?.url || '/orders';
-    data = optionsParam?.data || {};
+    if (typeof optionsParam === 'string') {
+      type = optionsParam;
+      icon = '/logo.png';
+      url = '/orders';
+      data = {};
+      orderId = null;
+    } else {
+      icon = optionsParam?.icon || '/logo.png';
+      url = optionsParam?.url || '/orders';
+      data = optionsParam?.data || {};
+      type = optionsParam?.type;
+      orderId = optionsParam?.orderId;
+    }
   }
 
   const parsedUserId = Number(userId);
@@ -99,6 +125,39 @@ export async function userPushNotification(
       failureCount: 0,
       error: `Invalid userId provided: ${userId}`,
     };
+  }
+
+  // Determine notification type (e.g. "ordered", "delivered", "packed", "out for delivery", "cancelled")
+  const resolvedType = (
+    type ||
+    data?.status ||
+    (data?.type && data.type !== 'order_status_update' ? data.type : null) ||
+    data?.status ||
+    'order'
+  ).toString().trim().toLowerCase();
+
+  // Determine associated orderId
+  const rawOrderId = orderId ?? data?.orderId ?? data?.order_id;
+  const parsedOrderId = rawOrderId !== undefined && rawOrderId !== null && rawOrderId !== ''
+    ? Number(rawOrderId)
+    : null;
+  const resolvedOrderId = Number.isInteger(parsedOrderId) && parsedOrderId! > 0 ? parsedOrderId : null;
+
+  // Insert record into Notification table when push notification is triggered
+  let notificationId: number | undefined;
+  if (parsedUserId > 0 && title.trim() && body.trim()) {
+    try {
+      const savedNotif = await insertNotification({
+        userId: parsedUserId,
+        orderId: resolvedOrderId,
+        title: title.trim(),
+        content: body.trim(),
+        type: resolvedType,
+      });
+      notificationId = savedNotif.id;
+    } catch (dbErr) {
+      console.error(`[userPushNotification] Error recording notification in database for user ${parsedUserId}:`, dbErr);
+    }
   }
 
   try {
@@ -114,6 +173,7 @@ export async function userPushNotification(
         successCount: 0,
         failureCount: 0,
         error: `No active FCM tokens found in userLogin table for user ID ${parsedUserId}.`,
+        notificationId,
       };
     }
 
@@ -126,6 +186,7 @@ export async function userPushNotification(
         successCount: 0,
         failureCount: 0,
         error: `No valid FCM tokens found for user ID ${parsedUserId}.`,
+        notificationId,
       };
     }
 
@@ -141,6 +202,7 @@ export async function userPushNotification(
         failureCount: tokens.length,
         error:
           'Firebase Admin SDK is not configured. Please add FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY to your .env file.',
+        notificationId,
       };
     }
 
@@ -159,6 +221,9 @@ export async function userPushNotification(
         icon,
         url,
         userId: String(parsedUserId),
+        type: resolvedType,
+        ...(resolvedOrderId ? { orderId: String(resolvedOrderId) } : {}),
+        ...(notificationId ? { notificationId: String(notificationId) } : {}),
         ...data,
       },
       android: {
@@ -249,6 +314,7 @@ export async function userPushNotification(
       successCount: response.successCount,
       failureCount: response.failureCount,
       cleanedTokensCount,
+      notificationId,
     };
   } catch (error: any) {
     console.error(`Error sending push notification to user ${parsedUserId}:`, error);
@@ -258,6 +324,7 @@ export async function userPushNotification(
       successCount: 0,
       failureCount: 0,
       error: error?.message || 'Unexpected error occurred while dispatching user push notification.',
+      notificationId,
     };
   }
 }
