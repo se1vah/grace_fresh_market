@@ -594,6 +594,7 @@ Supports both numeric IDs (`101`) and `#GFM-` formatted strings (`#GFM-101`).
 | :--- | :--- | :--- | :--- |
 | `orderId` / `id` | `number \| string` | Required on `get-by-id` | Order ID (e.g. `101` or `#GFM-101`). |
 | `userId` / `user_id` | `number` | Optional | User ID (required if user JWT is not present). |
+| `notificationId` / `notification_id` | `number \| string` | Optional | If provided, automatically updates the notification's `isRead` to `true`. |
 
 ---
 
@@ -605,9 +606,15 @@ GET /api/users/orders/101
 Authorization: Bearer <token>
 ```
 
+#### Using Dynamic Route with notificationId (marks notification as read):
+```http
+GET /api/users/orders/101?notificationId=45
+Authorization: Bearer <token>
+```
+
 #### Using Query Route:
 ```http
-GET /api/user/orders/get-by-id?orderId=101
+GET /api/user/orders/get-by-id?orderId=101&notificationId=45
 Authorization: Bearer <token>
 ```
 

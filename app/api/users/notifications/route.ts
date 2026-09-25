@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
-import {
-  getNotificationsByUserId,
-  deleteNotificationById,
-} from '@/lib/services/notification';
+import { getNotificationsByUserId } from '@/lib/services/notification';
 
 /**
  * GET /api/users/notifications
@@ -80,65 +77,6 @@ export async function GET(request: NextRequest) {
     console.error('[GET /api/users/notifications] Error:', error);
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred while retrieving notifications.' },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/users/notifications
- * Deletes a notification by ID for the authenticated or specified user.
- * Accepts notification `id` via query parameter or JSON body.
- */
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = request.nextUrl;
-    let id: number | null = null;
-    let rawUserId = searchParams.get('userId') || searchParams.get('user_id');
-
-    const queryId = searchParams.get('id');
-    if (queryId) {
-      id = Number(queryId);
-    } else {
-      const body = await request.json().catch(() => ({}));
-      if (body?.id) id = Number(body.id);
-      if (!rawUserId && (body?.userId || body?.user_id)) {
-        rawUserId = String(body.userId || body.user_id);
-      }
-    }
-
-    if (!id || isNaN(id) || id <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'A valid notification ID is required.' },
-        { status: 400 }
-      );
-    }
-
-    const userId = await getUserIdFromRequest(request, rawUserId);
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required. Please log in or provide a valid user ID.' },
-        { status: 401 }
-      );
-    }
-
-    const deleted = await deleteNotificationById(id, userId);
-
-    if (!deleted) {
-      return NextResponse.json(
-        { success: false, error: 'Notification not found or access denied.' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Notification removed successfully.',
-    });
-  } catch (error: unknown) {
-    console.error('[DELETE /api/users/notifications] Error:', error);
-    return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred while removing the notification.' },
       { status: 500 }
     );
   }

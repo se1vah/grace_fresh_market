@@ -16,6 +16,7 @@ export interface NotificationRecord {
   title: string;
   content: string;
   type: string;
+  isRead: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
@@ -24,6 +25,7 @@ export interface GetNotificationsOptions {
   limit?: number;
   offset?: number;
   type?: string;
+  isRead?: boolean;
 }
 
 /**
@@ -85,7 +87,7 @@ export async function insertNotification(
     insertId = result.insertId;
 
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
-      'SELECT id, userId, orderId, title, content, type, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
+      'SELECT id, userId, orderId, title, content, type, isRead, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
       [insertId]
     );
 
@@ -98,6 +100,7 @@ export async function insertNotification(
         title: String(row.title),
         content: String(row.content),
         type: String(row.type),
+        isRead: Boolean(row.isRead),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
@@ -108,7 +111,7 @@ export async function insertNotification(
     insertId = result.insertId;
 
     const rows = await query<any[]>(
-      'SELECT id, userId, orderId, title, content, type, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
+      'SELECT id, userId, orderId, title, content, type, isRead, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
       [insertId]
     );
 
@@ -121,6 +124,7 @@ export async function insertNotification(
         title: String(row.title),
         content: String(row.content),
         type: String(row.type),
+        isRead: Boolean(row.isRead),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
@@ -136,6 +140,7 @@ export async function insertNotification(
     title: cleanTitle,
     content: cleanContent,
     type,
+    isRead: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -160,12 +165,17 @@ export async function getNotificationsByUserId(
   const offset = options?.offset && options.offset >= 0 ? options.offset : 0;
   const filterType = options?.type ? options.type.trim().toLowerCase() : null;
 
-  let sql = 'SELECT id, userId, orderId, title, content, type, createdAt, updatedAt FROM `Notification` WHERE userId = ?';
+  let sql = 'SELECT id, userId, orderId, title, content, type, isRead, createdAt, updatedAt FROM `Notification` WHERE userId = ?';
   const params: any[] = [parsedUserId];
 
   if (filterType) {
     sql += ' AND type = ?';
     params.push(filterType);
+  }
+
+  if (typeof options?.isRead === 'boolean') {
+    sql += ' AND isRead = ?';
+    params.push(options.isRead ? 1 : 0);
   }
 
   sql += ' ORDER BY createdAt DESC, id DESC LIMIT ? OFFSET ?';
@@ -182,6 +192,7 @@ export async function getNotificationsByUserId(
     title: String(row.title),
     content: String(row.content),
     type: String(row.type),
+    isRead: Boolean(row.isRead),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }));
@@ -197,7 +208,7 @@ export async function getNotificationById(
   if (!Number.isInteger(parsedId) || parsedId <= 0) return null;
 
   const rows = await query<any[]>(
-    'SELECT id, userId, orderId, title, content, type, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
+    'SELECT id, userId, orderId, title, content, type, isRead, createdAt, updatedAt FROM `Notification` WHERE id = ? LIMIT 1',
     [parsedId]
   );
 
@@ -211,28 +222,31 @@ export async function getNotificationById(
     title: String(row.title),
     content: String(row.content),
     type: String(row.type),
+    isRead: Boolean(row.isRead),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
 /**
- * Deletes a notification by ID (with optional userId ownership verification).
+ * Updates the isRead status for a notification by ID.
+ * Optionally restricts the update by userId if provided.
  */
-export async function deleteNotificationById(
+export async function markNotificationAsRead(
   id: number | string,
-  userId?: number | string
+  isRead = true,
+  userId?: number | string | null
 ): Promise<boolean> {
   const parsedId = Number(id);
   if (!Number.isInteger(parsedId) || parsedId <= 0) return false;
 
+  await initShopDb();
+  let sql = 'UPDATE `Notification` SET isRead = ? WHERE id = ?';
+  const params: any[] = [isRead ? 1 : 0, parsedId];
+
   const parsedUserId = parseNullableId(userId);
-
-  let sql = 'DELETE FROM `Notification` WHERE id = ?';
-  const params: any[] = [parsedId];
-
   if (parsedUserId) {
-    sql += ' AND userId = ?';
+    sql += ' AND (userId = ? OR userId IS NULL)';
     params.push(parsedUserId);
   }
 

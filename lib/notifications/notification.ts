@@ -3,7 +3,7 @@ export {
   createNotification,
   getNotificationsByUserId,
   getNotificationById,
-  deleteNotificationById,
+  markNotificationAsRead,
   type CreateNotificationInput,
   type NotificationRecord,
   type GetNotificationsOptions,

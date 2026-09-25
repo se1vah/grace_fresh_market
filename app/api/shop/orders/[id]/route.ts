@@ -44,7 +44,14 @@ export async function GET(
       );
     }
 
-    const order = await getOrderById(orderId);
+    const { searchParams } = request.nextUrl;
+    const rawNotificationId =
+      searchParams.get('notificationId') ||
+      searchParams.get('notification_id');
+
+    const order = await getOrderById(orderId, {
+      notificationId: rawNotificationId,
+    });
 
     if (!order) {
       return NextResponse.json(

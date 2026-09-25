@@ -477,11 +477,13 @@ export async function initShopDb(): Promise<void> {
           title VARCHAR(255) NOT NULL,
           content TEXT NOT NULL,
           type VARCHAR(50) NOT NULL DEFAULT 'general',
+          isRead BOOLEAN NOT NULL DEFAULT FALSE,
           createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           INDEX idx_notification_user (userId),
           INDEX idx_notification_order (orderId),
           INDEX idx_notification_type (type),
+          INDEX idx_notification_is_read (isRead),
           INDEX idx_notification_created (createdAt),
           CONSTRAINT fk_notification_user
               FOREIGN KEY (userId) REFERENCES users(id)
@@ -493,6 +495,14 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createNotificationTableQuery);
+
+    try {
+      await activePool.query(
+        'ALTER TABLE Notification ADD COLUMN isRead BOOLEAN NOT NULL DEFAULT FALSE;'
+      );
+    } catch {
+      // Column may already exist
+    }
 
     try {
       await activePool.query('ALTER TABLE `Order` DROP COLUMN grandTotal;');

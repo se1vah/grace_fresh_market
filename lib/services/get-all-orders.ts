@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { query } from '@/lib/db';
+import { markNotificationAsRead } from '@/lib/services/notification';
 
 export const DEFAULT_SUBCATEGORY_IMAGE = '/app-images/subCategoryDefault.png';
 
@@ -652,10 +653,42 @@ export async function getAllOrdersForUser(userId: number): Promise<UserOrder[]> 
   return getAllOrders({ userId });
 }
 
+export interface GetOrderByIdOptions {
+  userId?: number;
+  notificationId?: number | string | null;
+}
+
 export async function getOrderById(
   orderId: number,
-  options?: { userId?: number }
+  optionsOrNotificationId?: GetOrderByIdOptions | number | string | null,
+  notificationIdArg?: number | string | null
 ): Promise<UserOrder | null> {
-  const orders = await getAllOrders({ orderId, userId: options?.userId });
+  let userId: number | undefined;
+  let notificationId: number | string | null = null;
+  if (typeof optionsOrNotificationId === 'object' && optionsOrNotificationId !== null) {
+    userId = optionsOrNotificationId.userId;
+    notificationId = optionsOrNotificationId.notificationId ?? null;
+  } else if (
+    typeof optionsOrNotificationId === 'number' ||
+    typeof optionsOrNotificationId === 'string'
+  ) {
+    notificationId = optionsOrNotificationId;
+  }
+
+  if (notificationIdArg !== undefined && notificationIdArg !== null) {
+    notificationId = notificationIdArg;
+  }
+  if (notificationId !== null && notificationId !== undefined && notificationId !== '') {
+    const parsedNotificationId = Number(notificationId);
+    if (Number.isInteger(parsedNotificationId) && parsedNotificationId > 0) {
+      try {
+        await markNotificationAsRead(parsedNotificationId, true, userId);
+      } catch (err) {
+        console.error(`[getOrderById] Error marking notification #${notificationId} as read:`, err);
+      }
+    }
+  }
+
+  const orders = await getAllOrders({ orderId, userId });
   return orders.length > 0 ? orders[0] : null;
 }

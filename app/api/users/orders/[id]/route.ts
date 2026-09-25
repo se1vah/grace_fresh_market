@@ -52,10 +52,14 @@ export async function GET(
     const shopUser = await authenticateShop(request);
     const isShopAdmin = !!shopUser;
 
+    const { searchParams } = request.nextUrl;
+    const rawNotificationId =
+      searchParams.get('notificationId') ||
+      searchParams.get('notification_id');
+
     // 2. If not shop admin, enforce user authentication & identity checks
     let userId: number | null = null;
     if (!isShopAdmin) {
-      const { searchParams } = request.nextUrl;
       const rawUserId = searchParams.get('userId') || searchParams.get('user_id');
 
       if (rawUserId !== null && rawUserId !== '') {
@@ -100,7 +104,10 @@ export async function GET(
     }
 
     // 3. Fetch full order by ID
-    const order = await getOrderById(orderId);
+    const order = await getOrderById(orderId, {
+      userId: isShopAdmin ? undefined : (userId ?? undefined),
+      notificationId: rawNotificationId,
+    });
 
     if (!order) {
       return NextResponse.json(
