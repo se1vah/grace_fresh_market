@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import type { UserOrder, OrderItem } from '@/lib/services/get-all-orders';
+import { formatOrderItemRate, formatOrderItemsSummary } from '@/lib/format-quantity';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -145,7 +146,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 <span>Order Items ({order.items.length})</span>
               </h4>
               <span className="text-xs text-gray-500 font-medium">
-                Total Quantity: {order.totalItems}
+                Total Quantity: {formatOrderItemsSummary(order.items, order.totalItems)}
               </span>
             </div>
 
@@ -193,8 +194,8 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
 
                       {/* Right: Quantity, Rate, Item Total */}
                       <div className="text-right shrink-0">
-                        <div className="text-xs text-gray-500 font-medium">
-                          {item.quantity} × ₹{unitPrice.toFixed(2)}
+                        <div className="text-xs text-gray-600 font-semibold font-quicksand">
+                          {formatOrderItemRate(item.quantity, unitPrice, subCategoryType)}
                         </div>
                         <div className="text-sm font-bold text-gray-900 font-quicksand mt-0.5">
                           ₹{item.itemTotal.toFixed(2)}
@@ -281,8 +282,10 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 </div>
 
                 <div className="flex justify-between text-xs text-gray-600">
-                  <span>Total Items:</span>
-                  <span className="font-bold text-gray-800">{order.totalItems} units</span>
+                  <span>Total Quantity:</span>
+                  <span className="font-bold text-gray-800">
+                    {formatOrderItemsSummary(order.items, order.totalItems)}
+                  </span>
                 </div>
 
                 <div className="pt-2.5 border-t border-[#E2EAE1] flex justify-between items-center">

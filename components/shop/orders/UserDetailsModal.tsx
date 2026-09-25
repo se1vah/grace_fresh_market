@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import type { UserOrder } from '@/lib/services/get-all-orders';
+import { formatOrderItemsSummary } from '@/lib/format-quantity';
 
 interface UserDetailsModalProps {
   isOpen: boolean;
@@ -229,7 +230,7 @@ export default function UserDetailsModal({ isOpen, onClose, order }: UserDetails
               <strong className="text-sm font-bold text-[#2D5A27]">₹{order.total.toFixed(2)}</strong>
             </div>
             <div className="text-xs font-bold text-gray-500">
-              {order.items.length} items
+              {order.items.length} {order.items.length === 1 ? 'item' : 'items'} ({formatOrderItemsSummary(order.items, order.totalItems)})
             </div>
           </div>
         </div>

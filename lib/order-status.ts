@@ -292,3 +292,5 @@ export const STATUS_UI_CONFIG: Record<OrderStatusType, StatusUIConfig> = {
     description: 'Order cancelled',
   },
 };
+
+export * from './format-quantity';

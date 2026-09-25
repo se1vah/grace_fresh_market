@@ -19,6 +19,7 @@ import OrderStatusDropdown from './OrderStatusDropdown';
 import UserDetailsModal from './UserDetailsModal';
 import OrderDetailsModal from './OrderDetailsModal';
 import { normalizeOrderStatus } from '@/lib/order-status';
+import { formatOrderItemsSummary } from '@/lib/format-quantity';
 
 interface OrdersTableProps {
   orders: UserOrder[];
@@ -241,8 +242,8 @@ export default function OrdersTable({
                             <span>{itemsCount} {itemsCount === 1 ? 'Item' : 'Items'}</span>
                             <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-[#2D5A27]" />
                           </div>
-                          <div className="text-[11px] text-gray-500">
-                            {order.totalItems} total quantity
+                          <div className="text-[11px] text-gray-500 font-medium">
+                            {formatOrderItemsSummary(order.items, order.totalItems)}
                           </div>
                         </div>
                       </button>
@@ -383,8 +384,8 @@ export default function OrdersTable({
                         <div className="text-xs font-bold text-gray-900 group-hover:text-[#2D5A27] flex items-center gap-1 transition">
                           <span>{itemsCount} {itemsCount === 1 ? 'Item' : 'Items'}</span>
                         </div>
-                        <div className="text-[11px] text-gray-500">
-                          {order.totalItems} total quantity
+                        <div className="text-[11px] text-gray-500 font-medium">
+                          {formatOrderItemsSummary(order.items, order.totalItems)}
                         </div>
                       </div>
                     </div>
