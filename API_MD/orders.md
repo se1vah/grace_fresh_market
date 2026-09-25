@@ -479,14 +479,26 @@ Each object in `data` includes:
 | `subcategory` | `object` | Nested subcategory, images, and category. |
 | `createdAt` / `updatedAt` | `string` | Line-item timestamps. |
 
-### Order status values
+### Order status values & Sequential Workflow
 
-Allowed `OrderStatus.status` values:
-- `ordered`
-- `packed`
-- `out for delivery`
-- `delivered`
-- `cancelled`
+Available order statuses:
+1. `ordered`
+2. `packed`
+3. `out for delivery`
+4. `delivered`
+5. `cancelled`
+
+#### Sequential Transition Rules (Strict Step-by-Step Flow)
+```text
+ordered → packed → out for delivery → delivered
+```
+- **From `ordered`**: Only `packed` and `cancelled` are permitted.
+- **From `packed`**: Only `out for delivery` and `cancelled` are permitted.
+- **From `out for delivery`**: Only `delivered` and `cancelled` are permitted.
+- **From `delivered`**: Final terminal state. No transitions allowed (cannot revert, skip, or cancel).
+- **From `cancelled`**: Final terminal state. No transitions allowed.
+- Skipping statuses (e.g., `ordered → out for delivery` or `ordered → delivered`) is strictly rejected server-side with `400 Bad Request`.
+- Reverting to earlier statuses (e.g., `packed → ordered` or `delivered → out for delivery`) is strictly rejected.
 
 ---
 

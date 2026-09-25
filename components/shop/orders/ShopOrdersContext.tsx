@@ -69,10 +69,10 @@ export function ShopOrdersProvider({ children }: { children: React.ReactNode }) 
     refetchOrders();
   }, [refreshCount, refetchOrders]);
 
-  // Subscribe to socket event 'new-order-to-shop'
+  // Subscribe to socket events 'notify-order-to-shop' and 'new-order-to-shop'
   useEffect(() => {
-    const unsubscribe = subscribe('new-order-to-shop', (payload: any) => {
-      // Update sideMenu count immediately
+    const handleOrderUpdate = (payload: any) => {
+      // Update pending order count immediately
       if (payload && typeof payload.orderCount === 'number') {
         setOrderedCount(payload.orderCount);
       } else {
@@ -81,9 +81,15 @@ export function ShopOrdersProvider({ children }: { children: React.ReactNode }) 
 
       // Refetch full orders query so the orders management table updates in real time
       refetchOrders();
-    });
+    };
 
-    return unsubscribe;
+    const unsubNotify = subscribe('notify-order-to-shop', handleOrderUpdate);
+    const unsubNew = subscribe('new-order-to-shop', handleOrderUpdate);
+
+    return () => {
+      if (unsubNotify) unsubNotify();
+      if (unsubNew) unsubNew();
+    };
   }, [subscribe, refreshCount, refetchOrders]);
 
   // Update order status mutation
@@ -108,14 +114,15 @@ export function ShopOrdersProvider({ children }: { children: React.ReactNode }) 
           setOrderedCount(data.orderCount);
         }
 
-        // Optimistically update local order in state
+        // Optimistically update local order in state with returned canonical status
+        const resolvedStatus = data.status || status;
         setOrders((prev) =>
           prev.map((order) => {
             if (order.id === orderId) {
               const updatedStatusObj = {
                 id: Date.now(),
                 orderId,
-                status,
+                status: resolvedStatus,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               };

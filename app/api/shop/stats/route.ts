@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
                 monthTotalOrders += 1;
               }
             }
-          } catch {}
+          } catch { }
         }
       }
     }

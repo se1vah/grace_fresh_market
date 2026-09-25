@@ -137,9 +137,8 @@ export default function CustomerDetailsModal({
               ) : null}
 
               <div
-                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#80C34A] to-emerald-600 text-white flex items-center justify-center text-xl sm:text-2xl font-bold font-quicksand border-2 border-white/80 shadow-md ${
-                  customer.profileImage ? 'hidden' : 'flex'
-                }`}
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#80C34A] to-emerald-600 text-white flex items-center justify-center text-xl sm:text-2xl font-bold font-quicksand border-2 border-white/80 shadow-md ${customer.profileImage ? 'hidden' : 'flex'
+                  }`}
               >
                 {getInitials(customer.fullName)}
               </div>
@@ -202,33 +201,30 @@ export default function CustomerDetailsModal({
         <div className="flex border-b border-[#E2EAE1] px-6 bg-white shrink-0">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'profile'
+            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'profile'
                 ? 'border-[#2D5A27] text-[#2D5A27]'
                 : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
+              }`}
           >
             <User className="w-4 h-4" />
             <span>Profile & Contacts</span>
           </button>
           <button
             onClick={() => setActiveTab('addresses')}
-            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'addresses'
+            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'addresses'
                 ? 'border-[#2D5A27] text-[#2D5A27]'
                 : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
+              }`}
           >
             <MapPin className="w-4 h-4" />
             <span>Saved Addresses ({customer.addresses?.length || 0})</span>
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'orders'
+            className={`py-3 px-4 text-xs sm:text-sm font-bold font-quicksand border-b-2 transition cursor-pointer flex items-center gap-1.5 ${activeTab === 'orders'
                 ? 'border-[#2D5A27] text-[#2D5A27]'
                 : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
+              }`}
           >
             <ShoppingBag className="w-4 h-4" />
             <span>Order History ({customer.recentOrders?.length || 0})</span>
@@ -361,11 +357,10 @@ export default function CustomerDetailsModal({
                 customer.addresses.map((addr) => (
                   <div
                     key={addr.id}
-                    className={`p-4 rounded-2xl border transition ${
-                      addr.isDefault
+                    className={`p-4 rounded-2xl border transition ${addr.isDefault
                         ? 'bg-[#F2F7F2] border-[#80C34A]'
                         : 'bg-white border-[#E2EAE1]'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">

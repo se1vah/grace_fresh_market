@@ -1,15 +1,15 @@
 'use client';
 
 import React from 'react';
-import { 
-  ShoppingBag, 
-  Package, 
-  CreditCard, 
-  MapPin, 
-  X, 
-  CheckCircle2, 
-  Truck, 
-  Clock, 
+import {
+  ShoppingBag,
+  Package,
+  CreditCard,
+  MapPin,
+  X,
+  CheckCircle2,
+  Truck,
+  Clock,
   Ban,
   Calendar,
   Layers,

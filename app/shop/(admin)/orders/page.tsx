@@ -16,6 +16,7 @@ import {
 import SearchInput from '@/components/common/SearchInput';
 import { useShopOrders } from '@/components/shop/orders/ShopOrdersContext';
 import OrdersTable from '@/components/shop/orders/OrdersTable';
+import { normalizeOrderStatus } from '@/lib/order-status';
 
 export default function OrdersManagementPage() {
   const { orders, orderedCount, loading, error, refetchOrders, updateOrderStatus } = useShopOrders();
@@ -37,17 +38,17 @@ export default function OrdersManagementPage() {
     let totalRevenue = 0;
 
     for (const order of orders) {
-      const s = (order.orderStatus?.status || 'ordered').toLowerCase().trim();
-      const isCancelled = s === 'cancelled' || s === 'canceled';
+      const s = normalizeOrderStatus(order.orderStatus?.status);
+      const isCancelled = s === 'cancelled';
 
       if (!isCancelled) {
         totalRevenue += Number(order.total || 0);
       }
 
-      if (s === 'ordered' || s === 'orderd') ordered++;
+      if (s === 'ordered') ordered++;
       else if (s === 'packed') packed++;
       else if (s === 'out for delivery') outForDelivery++;
-      else if (s === 'delivered' || s === 'deliverd') delivered++;
+      else if (s === 'delivered') delivered++;
       else if (isCancelled) cancelled++;
     }
 

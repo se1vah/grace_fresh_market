@@ -7,10 +7,14 @@ import { getShopPendingOrderCount } from '@/lib/services/order';
 import { emitSocketEvent } from '@/lib/socket';
 import { userPushNotification } from '@/lib/notifications/userPushNotification';
 
-const VALID_STATUSES = ['ordered', 'packed', 'out for delivery', 'delivered', 'cancelled'] as const;
-type ValidStatus = (typeof VALID_STATUSES)[number];
+import { 
+  ORDER_STATUSES, 
+  OrderStatusType, 
+  normalizeOrderStatus, 
+  validateStatusTransition 
+} from '@/lib/order-status';
 
-function getOrderStatusNotification(orderId: number, status: ValidStatus) {
+function getOrderStatusNotification(orderId: number, status: OrderStatusType) {
   switch (status) {
     case 'ordered':
       return {
@@ -83,8 +87,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/shop/orders
- * Updates an order's status, appends to OrderStatus history,
- * and emits the 'notify-order-to-shop' socket event with updated count.
+ * Sequentially updates an order's status, enforces single-step transitions,
+ * appends to OrderStatus history, and emits the 'notify-order-to-shop' socket event.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -105,15 +109,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'A valid positive integer orderId is required.' }, { status: 400 });
     }
 
-    const normalizedStatus = String(status || '').trim().toLowerCase() as ValidStatus;
-    if (!VALID_STATUSES.includes(normalizedStatus)) {
-      return NextResponse.json(
-        {
-          error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`,
-        },
-        { status: 400 }
-      );
-    }
+    const rawStatus = String(status || '').trim().toLowerCase();
+    const normalizedTarget = normalizeOrderStatus(rawStatus);
 
     // Verify order exists and retrieve userId
     const existingOrders = await query<any[]>('SELECT id, userId FROM `Order` WHERE id = ? LIMIT 1', [parsedOrderId]);
@@ -123,46 +120,31 @@ export async function PATCH(request: NextRequest) {
 
     const targetUserId = existingOrders[0]?.userId;
 
-    // Check latest status of this order to prevent reverting backwards
+    // Check latest status of this order
     const latestStatusRows = await query<any[]>(
       'SELECT status FROM OrderStatus WHERE orderId = ? ORDER BY id DESC LIMIT 1',
       [parsedOrderId]
     );
-    const currentStatus = (latestStatusRows?.[0]?.status || 'ordered').toLowerCase().trim();
+    const normalizedCurrent = normalizeOrderStatus(latestStatusRows?.[0]?.status);
 
-    if (currentStatus === 'delivered' || currentStatus === 'deliverd' || currentStatus === 'cancelled') {
-      return NextResponse.json(
-        { error: `Order #${parsedOrderId} is already ${currentStatus} and cannot be modified.` },
-        { status: 400 }
-      );
-    }
-
-    const STATUS_ORDER: Record<string, number> = {
-      ordered: 0,
-      orderd: 0,
-      packed: 1,
-      'out for delivery': 2,
-      delivered: 3,
-      deliverd: 3,
-      delivery: 3,
-    };
-
-    const currentStep = STATUS_ORDER[currentStatus] ?? -1;
-    const targetStep = STATUS_ORDER[normalizedStatus] ?? -1;
-
-    if (currentStep !== -1 && targetStep !== -1 && targetStep < currentStep) {
+    // Validate sequential status transition server-side
+    const validation = validateStatusTransition(normalizedCurrent, normalizedTarget, parsedOrderId);
+    if (!validation.isValid) {
       return NextResponse.json(
         {
-          error: `Cannot revert order #${parsedOrderId} from "${currentStatus}" to previous status "${normalizedStatus}".`,
+          error: validation.error,
+          currentStatus: normalizedCurrent,
+          targetStatus: normalizedTarget,
+          allowedNextStatuses: validation.allowedTransitions,
         },
         { status: 400 }
       );
     }
 
-    // Insert new status entry into OrderStatus table
+    // Insert new valid status entry into OrderStatus table
     await query(
       'INSERT INTO OrderStatus (orderId, status) VALUES (?, ?)',
-      [parsedOrderId, normalizedStatus]
+      [parsedOrderId, normalizedTarget]
     );
 
     // Compute updated pending orders count
@@ -172,7 +154,7 @@ export async function PATCH(request: NextRequest) {
     try {
       await emitSocketEvent('notify-order-to-shop', {
         orderId: parsedOrderId,
-        status: normalizedStatus,
+        status: normalizedTarget,
         orderCount: updatedCount,
       });
     } catch (socketErr) {
@@ -181,7 +163,7 @@ export async function PATCH(request: NextRequest) {
 
     // Dispatch Web Push Notification to user's registered device(s)
     if (targetUserId) {
-      const notif = getOrderStatusNotification(parsedOrderId, normalizedStatus);
+      const notif = getOrderStatusNotification(parsedOrderId, normalizedTarget);
       try {
         await userPushNotification({
           userId: targetUserId,
@@ -189,11 +171,11 @@ export async function PATCH(request: NextRequest) {
           body: notif.body,
           url: '/orders',
           orderId: parsedOrderId,
-          type: normalizedStatus,
+          type: normalizedTarget,
           data: {
             orderId: String(parsedOrderId),
-            status: normalizedStatus,
-            type: normalizedStatus,
+            status: normalizedTarget,
+            type: normalizedTarget,
           },
         });
       } catch (pushErr) {
@@ -203,9 +185,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Order #${parsedOrderId} status updated to "${normalizedStatus}".`,
+      message: `Order #${parsedOrderId} status updated to "${normalizedTarget}".`,
       orderId: parsedOrderId,
-      status: normalizedStatus,
+      status: normalizedTarget,
       orderCount: updatedCount,
     });
   } catch (error: unknown) {

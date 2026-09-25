@@ -18,6 +18,7 @@ import type { UserOrder } from '@/lib/services/get-all-orders';
 import OrderStatusDropdown from './OrderStatusDropdown';
 import UserDetailsModal from './UserDetailsModal';
 import OrderDetailsModal from './OrderDetailsModal';
+import { normalizeOrderStatus } from '@/lib/order-status';
 
 interface OrdersTableProps {
   orders: UserOrder[];
@@ -47,16 +48,9 @@ export default function OrdersTable({
     return orders.filter((order) => {
       // 1. Status Filter
       if (selectedStatusFilter !== 'all') {
-        const currentStatus = (order.orderStatus?.status || 'ordered').toLowerCase().trim();
-        if (selectedStatusFilter === 'ordered' && currentStatus !== 'ordered' && currentStatus !== 'orderd') {
-          return false;
-        } else if (selectedStatusFilter === 'delivered' && currentStatus !== 'delivered' && currentStatus !== 'deliverd') {
-          return false;
-        } else if (
-          selectedStatusFilter !== 'ordered' &&
-          selectedStatusFilter !== 'delivered' &&
-          currentStatus !== selectedStatusFilter
-        ) {
+        const currentStatus = normalizeOrderStatus(order.orderStatus?.status);
+        const filterStatus = normalizeOrderStatus(selectedStatusFilter);
+        if (currentStatus !== filterStatus) {
           return false;
         }
       }

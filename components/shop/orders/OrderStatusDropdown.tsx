@@ -3,60 +3,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ChevronDown, 
-  Clock, 
-  Package, 
-  Truck, 
   CheckCircle2, 
-  Ban, 
-  Loader2 
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { 
+  ORDER_STATUSES, 
+  OrderStatusType, 
+  STATUS_UI_CONFIG, 
+  normalizeOrderStatus, 
+  validateStatusTransition,
+  isTerminalStatus
+} from '@/lib/order-status';
+import CancelOrderModal from './CancelOrderModal';
 
-export const STATUS_CONFIG = {
-  ordered: {
-    label: 'Ordered',
-    icon: Clock,
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100',
-    dotClass: 'bg-amber-500',
-  },
-  packed: {
-    label: 'Packed',
-    icon: Package,
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100',
-    dotClass: 'bg-blue-500',
-  },
-  'out for delivery': {
-    label: 'Out for Delivery',
-    icon: Truck,
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100',
-    dotClass: 'bg-purple-500',
-  },
-  delivered: {
-    label: 'Delivered',
-    icon: CheckCircle2,
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100',
-    dotClass: 'bg-emerald-500',
-  },
-  cancelled: {
-    label: 'Cancelled',
-    icon: Ban,
-    badgeClass: 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100',
-    dotClass: 'bg-rose-500',
-  },
-} as const;
-
-export const STATUS_ORDER: Record<string, number> = {
-  ordered: 0,
-  orderd: 0,
-  packed: 1,
-  'out for delivery': 2,
-  delivered: 3,
-  deliverd: 3,
-  delivery: 3,
-};
-
-type StatusKey = keyof typeof STATUS_CONFIG;
-
-interface OrderStatusDropdownProps {
+export interface OrderStatusDropdownProps {
   orderId: number;
   currentStatus: string;
   onUpdateStatus: (orderId: number, newStatus: string) => Promise<{ success: boolean; error?: string }>;
@@ -69,14 +30,17 @@ export default function OrderStatusDropdown({
 }: OrderStatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelModalError, setCancelModalError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Normalize current status
-  const normalizedKey = (currentStatus?.toLowerCase().trim() || 'ordered') as StatusKey;
-  const activeConfig = STATUS_CONFIG[normalizedKey] || STATUS_CONFIG.ordered;
-  const ActiveIcon = activeConfig.icon;
+  // Canonical normalized current status
+  const normalizedKey = normalizeOrderStatus(currentStatus);
+  const activeConfig = STATUS_UI_CONFIG[normalizedKey] || STATUS_UI_CONFIG.ordered;
+  const isTerminal = isTerminalStatus(normalizedKey);
 
-  // Close dropdown on outside click
+  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -91,63 +55,88 @@ export default function OrderStatusDropdown({
     };
   }, [isOpen]);
 
-  const handleSelectStatus = async (statusKey: StatusKey) => {
-    const currentStep = STATUS_ORDER[normalizedKey] ?? -1;
-    const targetStep = STATUS_ORDER[statusKey] ?? -1;
-    const isPrevious = targetStep !== -1 && currentStep !== -1 && targetStep < currentStep;
+  // Auto-clear error message after 4 seconds
+  useEffect(() => {
+    if (!errorMessage) return;
+    const timer = setTimeout(() => {
+      setErrorMessage(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [errorMessage]);
 
-    if (statusKey === normalizedKey || isPrevious || isUpdating) {
+  const handleSelectStatus = async (targetKey: OrderStatusType) => {
+    if (isUpdating) return;
+
+    // Validate transition using single source of truth
+    const validation = validateStatusTransition(normalizedKey, targetKey, orderId);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Invalid status transition');
+      return;
+    }
+
+    // Intercept cancellation to display modern custom confirmation modal
+    if (targetKey === 'cancelled') {
       setIsOpen(false);
+      setCancelModalError(null);
+      setIsCancelModalOpen(true);
       return;
     }
 
     setIsUpdating(true);
     setIsOpen(false);
+    setErrorMessage(null);
+
     try {
-      await onUpdateStatus(orderId, statusKey);
+      const res = await onUpdateStatus(orderId, targetKey);
+      if (!res.success) {
+        setErrorMessage(res.error || 'Failed to update order status');
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Network error updating order status');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const isTerminalStatus =
-    normalizedKey === 'delivered' ||
-    (normalizedKey as string) === 'deliverd' ||
-    (normalizedKey as string) === 'delivery' ||
-    normalizedKey === 'cancelled';
+  const handleConfirmCancel = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    setCancelModalError(null);
 
-  // If status is delivered or cancelled, hide the dropdown and just show the status in a badge
-  if (isTerminalStatus) {
-    const isDelivered =
-      normalizedKey === 'delivered' ||
-      (normalizedKey as string) === 'deliverd' ||
-      (normalizedKey as string) === 'delivery';
+    try {
+      const res = await onUpdateStatus(orderId, 'cancelled');
+      if (!res.success) {
+        setCancelModalError(res.error || 'Failed to cancel order');
+      } else {
+        setIsCancelModalOpen(false);
+      }
+    } catch (err: any) {
+      setCancelModalError(err?.message || 'Network error cancelling order');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-quicksand border shadow-2xs select-none ${
-          isDelivered
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-            : 'bg-rose-50 text-rose-700 border-rose-300'
-        }`}
-      >
-        <span className={`w-2 h-2 rounded-full ${activeConfig.dotClass}`} />
-        <span>{activeConfig.label}</span>
-      </span>
-    );
-  }
+  const handleCloseCancelModal = () => {
+    if (isUpdating) return;
+    setIsCancelModalOpen(false);
+    setCancelModalError(null);
+  };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <>
+      <div className="relative inline-block text-left" ref={dropdownRef}>
       {/* Dropdown Trigger Button */}
       <button
         type="button"
         onClick={() => !isUpdating && setIsOpen((prev) => !prev)}
         disabled={isUpdating}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-quicksand border transition-all cursor-pointer shadow-2xs ${
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-quicksand border transition-all cursor-pointer shadow-2xs select-none ${
           activeConfig.badgeClass
         } ${isUpdating ? 'opacity-75 cursor-not-allowed' : ''}`}
-        aria-label={`Change status for order #${orderId}. Current status: ${activeConfig.label}`}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-label={`Order #${orderId} status: ${activeConfig.label}. Click to manage status.`}
       >
         {isUpdating ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" />
@@ -155,64 +144,113 @@ export default function OrderStatusDropdown({
           <span className={`w-2 h-2 rounded-full ${activeConfig.dotClass}`} />
         )}
         <span>{activeConfig.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
-      {/* Dropdown Menu Options */}
+      {/* Inline Error Toast */}
+      {errorMessage && (
+        <div className="absolute right-0 mt-1 z-40 max-w-xs bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold rounded-xl p-2.5 shadow-lg flex items-start gap-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+          <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1 leading-tight">{errorMessage}</div>
+        </div>
+      )}
+
+      {/* Dropdown Menu showing ALL statuses */}
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-48 rounded-2xl bg-white border border-[#E2EAE1] shadow-xl z-30 py-1.5 focus:outline-none animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-quicksand border-b border-gray-100 mb-1">
-            Update Status
+        <div 
+          className="absolute right-0 mt-1.5 w-52 rounded-2xl bg-white border border-[#E2EAE1] shadow-xl z-30 py-1.5 focus:outline-none animate-in fade-in zoom-in-95 duration-150 font-nunito"
+          role="menu"
+          aria-orientation="vertical"
+        >
+          {/* Header */}
+          <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-quicksand">
+              Order Status
+            </div>
+            {isTerminal && (
+              <span className="text-[9px] font-bold uppercase text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                Final
+              </span>
+            )}
           </div>
 
-          {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((key) => {
-            const itemConfig = STATUS_CONFIG[key];
-            const isCurrent = key === normalizedKey;
-            const currentStep = STATUS_ORDER[normalizedKey] ?? -1;
-            const targetStep = STATUS_ORDER[key] ?? -1;
-            const isPrevious = targetStep !== -1 && currentStep !== -1 && targetStep < currentStep;
-            const isDisabled = isPrevious || isCurrent || isUpdating;
+          <div className="py-1">
+            {ORDER_STATUSES.map((key) => {
+              const config = STATUS_UI_CONFIG[key];
+              const isCurrent = key === normalizedKey;
 
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => handleSelectStatus(key)}
-                title={
-                  isPrevious
-                    ? `Previous status: cannot revert to ${itemConfig.label}`
-                    : isCurrent
-                    ? `Current status: ${itemConfig.label}`
-                    : undefined
-                }
-                className={`w-full text-left px-3 py-2 text-xs font-bold font-quicksand flex items-center justify-between transition-colors ${
-                  isCurrent
-                    ? 'bg-[#F2F7F2] text-[#2D5A27] cursor-default'
-                    : isPrevious
-                    ? 'opacity-40 text-gray-400 bg-gray-50/50 cursor-not-allowed select-none'
-                    : 'text-gray-700 hover:bg-[#F9FBF9] hover:text-[#2D5A27] cursor-pointer'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isPrevious ? 'bg-gray-300' : itemConfig.dotClass
+              // Check transition rules
+              const validation = validateStatusTransition(normalizedKey, key, orderId);
+              const isAllowed = validation.isValid;
+              const isCancelOption = key === 'cancelled';
+              const isDisabled = !isAllowed || isCurrent || isUpdating;
+
+              // Divider before 'cancelled' for clean visual grouping
+              const isDividerBefore = key === 'cancelled';
+
+              return (
+                <React.Fragment key={key}>
+                  {isDividerBefore && (
+                    <div className="my-1 border-t border-gray-100" />
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={isDisabled}
+                    onClick={() => handleSelectStatus(key)}
+                    title={
+                      isCurrent
+                        ? `Order is currently ${config.label}`
+                        : isAllowed
+                        ? `Update order to ${config.label}`
+                        : validation.error || `Transition to ${config.label} is locked`
+                    }
+                    className={`w-full text-left px-3.5 py-2 text-xs font-quicksand flex items-center justify-between transition-colors ${
+                      isCurrent
+                        ? 'bg-[#F2F7F2] text-[#2D5A27] font-bold cursor-default'
+                        : isAllowed
+                        ? isCancelOption
+                          ? 'text-rose-600 font-bold hover:bg-rose-50 hover:text-rose-700 cursor-pointer'
+                          : 'text-gray-800 font-semibold hover:bg-gray-50 hover:text-gray-900 cursor-pointer'
+                        : 'text-gray-400 bg-transparent opacity-40 cursor-not-allowed select-none'
                     }`}
-                  />
-                  <span>{itemConfig.label}</span>
-                </div>
-                {isCurrent && <CheckCircle2 className="w-3.5 h-3.5 text-[#2D5A27]" />}
-                {isPrevious && (
-                  <span className="text-[10px] font-semibold text-gray-400 px-1.5 py-0.5 rounded bg-gray-100">
-                    Past
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          isDisabled && !isCurrent ? 'bg-gray-300' : config.dotClass
+                        }`}
+                      />
+                      <span className="truncate">{config.label}</span>
+                    </div>
+
+                    {isCurrent && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#2D5A27] shrink-0" />
+                    )}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
+
+    {/* Modern Custom Confirmation Modal for Cancellation */}
+    <CancelOrderModal
+      isOpen={isCancelModalOpen}
+      orderId={orderId}
+      currentStatus={currentStatus}
+      isCancelling={isUpdating}
+      errorMessage={cancelModalError}
+      onClose={handleCloseCancelModal}
+      onConfirm={handleConfirmCancel}
+    />
+  </>
   );
 }
+
+// Re-export constants for backwards compatibility with any other callers
+export { STATUS_UI_CONFIG as STATUS_CONFIG };
