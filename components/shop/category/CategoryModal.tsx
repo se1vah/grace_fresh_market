@@ -10,8 +10,6 @@ import {
   CheckCircle,
   FolderPlus,
   ShieldAlert,
-  Scale,
-  Package
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 
@@ -19,7 +17,6 @@ export interface CategoryData {
   id?: number;
   category_name: string;
   image: string;
-  category_type?: 'gram' | 'quantity';
   status: 'active' | 'inactive';
 }
 
@@ -53,7 +50,6 @@ export default function CategoryModal({
   categoryToEdit,
 }: CategoryModalProps) {
   const [categoryName, setCategoryName] = useState('');
-  const [categoryType, setCategoryType] = useState<'gram' | 'quantity'>('gram');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -91,13 +87,11 @@ export default function CategoryModal({
     if (isOpen) {
       if (categoryToEdit) {
         setCategoryName(categoryToEdit.category_name || '');
-        setCategoryType(categoryToEdit.category_type || 'gram');
         setStatus(categoryToEdit.status || 'active');
         setPreviewUrl(categoryToEdit.image || null);
         setSelectedFile(null);
       } else {
         setCategoryName('');
-        setCategoryType('gram');
         setStatus('active');
         setPreviewUrl(null);
         setSelectedFile(null);
@@ -177,7 +171,6 @@ export default function CategoryModal({
     try {
       const formData = new FormData();
       formData.append('category_name', categoryName.trim());
-      formData.append('category_type', categoryType);
       formData.append('status', status);
 
       if (selectedFile) {
@@ -276,38 +269,6 @@ export default function CategoryModal({
                   }`}
               />
               <ModernFieldError message={errors.categoryName} />
-            </div>
-
-            {/* Category Type Input */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
-                Category Type <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCategoryType('gram')}
-                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${categoryType === 'gram'
-                    ? 'bg-[#EAF2EA] border-[#2D5A27] text-[#2D5A27] ring-2 ring-[#2D5A27]/20 font-extrabold'
-                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
-                    }`}
-                >
-                  <Scale className="w-4 h-4 text-[#2D5A27]" />
-                  Gram
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCategoryType('quantity')}
-                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${categoryType === 'quantity'
-                    ? 'bg-blue-50 border-blue-600 text-blue-800 ring-2 ring-blue-600/20 font-extrabold'
-                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
-                    }`}
-                >
-                  <Package className="w-4 h-4 text-blue-600" />
-                  Quantity
-                </button>
-              </div>
             </div>
 
             {/* Category Image Upload & Preview */}

@@ -30,12 +30,12 @@ export async function fetchUserCart(userId: number) {
         c.created_at as cart_created_at,
         c.updated_at as cart_updated_at,
         s.subcategory_name,
+        s.sub_category_type,
         s.status as subcategory_status,
         s.amount,
         s.stock,
         s.category_id,
         cat.category_name,
-        cat.category_type,
         cat.status as category_status
      FROM cart c
      JOIN subcategories s ON c.subcategory_id = s.id
@@ -101,6 +101,7 @@ export async function fetchUserCart(userId: number) {
       subcategory: {
         id: row.subcategory_id,
         subcategoryName: row.subcategory_name,
+        subCategoryType: row.sub_category_type || 'gram',
         amount: unitPrice,
         stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
         status: row.subcategory_status,
@@ -109,7 +110,6 @@ export async function fetchUserCart(userId: number) {
         category: {
           id: row.category_id,
           categoryName: row.category_name,
-          categoryType: row.category_type,
           status: row.category_status,
         },
       },

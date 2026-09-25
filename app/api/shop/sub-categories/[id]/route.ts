@@ -18,10 +18,13 @@ function sanitizeSlug(text: string): string {
 
 
 function formatSubCategoryRow(row: any, imagesList: string[] = []) {
+  const subCategoryType = row.sub_category_type || row.subCategoryType || 'gram';
   return {
     id: row.id,
     subcategoryName: row.subcategory_name,
     subcategory_name: row.subcategory_name,
+    subCategoryType,
+    sub_category_type: subCategoryType,
     images: imagesList,
     status: row.status,
     amount: Number(row.amount),
@@ -58,7 +61,7 @@ export async function GET(
 
     const rows = await query<any[]>(
       `SELECT 
-        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
+        s.id, s.category_id, s.subcategory_name, s.sub_category_type, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
         c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
@@ -121,10 +124,19 @@ export async function PUT(
 
     const categoryIdRaw = formData.get('category_id') as string;
     const subcategoryName = (formData.get('subcategory_name') as string || existingSubCategory.subcategory_name).trim();
+    const subCategoryTypeRaw = formData.get('subCategoryType') || formData.get('sub_category_type');
+    const subCategoryType = (subCategoryTypeRaw ? subCategoryTypeRaw.toString() : (existingSubCategory.sub_category_type || 'gram')).toLowerCase();
     const status = (formData.get('status') as string || existingSubCategory.status).toLowerCase();
     const amountRaw = formData.get('amount') as string;
     const stockRaw = formData.get('stock') as string | null;
     const offerRaw = formData.get('offer') as string | null;
+
+    if (!['gram', 'quantity'].includes(subCategoryType)) {
+      return NextResponse.json(
+        { error: 'subCategoryType must be "gram" or "quantity"' },
+        { status: 400 }
+      );
+    }
 
     // Validate Category
     let categoryId = existingSubCategory.category_id;
@@ -312,14 +324,14 @@ export async function PUT(
     }
 
     await query(
-      'UPDATE subcategories SET category_id = ?, subcategory_name = ?, status = ?, amount = ?, stock = ?, offer = ? WHERE id = ?',
-      [categoryId, subcategoryName, status, amount, stock, offer, subCategoryId]
+      'UPDATE subcategories SET category_id = ?, subcategory_name = ?, sub_category_type = ?, status = ?, amount = ?, stock = ?, offer = ? WHERE id = ?',
+      [categoryId, subcategoryName, subCategoryType, status, amount, stock, offer, subCategoryId]
     );
 
     // Fetch updated row with category info
     const fetchedRows = await query<any[]>(
       `SELECT 
-        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
+        s.id, s.category_id, s.subcategory_name, s.sub_category_type, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
         c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id

@@ -156,7 +156,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                   const subcategoryName =
                     item.subcategory?.subcategoryName || `Item #${item.subcategoryId}`;
                   const categoryName = item.subcategory?.category?.categoryName || 'Produce';
-                  const categoryType = item.subcategory?.category?.categoryType;
+                  const subCategoryType = item.subcategory?.subCategoryType || (item as any).subCategoryType;
 
                   const unitPrice = item.subcategory?.amount ?? (item.quantity > 0 ? item.itemTotal / item.quantity : 0);
 
@@ -185,7 +185,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                           <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
                             <span className="inline-block px-2 py-0.2 rounded-md bg-[#EAF2EA] text-[#2D5A27] font-semibold text-[11px]">
                               {categoryName}
-                              {categoryType ? ` (${categoryType})` : ''}
+                              {subCategoryType ? ` (${subCategoryType})` : ''}
                             </span>
                           </div>
                         </div>

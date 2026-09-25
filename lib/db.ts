@@ -71,7 +71,6 @@ export async function initShopDb(): Promise<void> {
           id INT AUTO_INCREMENT PRIMARY KEY,
           category_name VARCHAR(255) NOT NULL,
           image VARCHAR(500) NOT NULL,
-          category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram',
           status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -83,19 +82,13 @@ export async function initShopDb(): Promise<void> {
 
     await activePool.query(createCategoriesTableQuery);
 
-    // Migration for existing categories table without category_type column
-    try {
-      await activePool.query(`ALTER TABLE categories ADD COLUMN category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
-
     // Ensure subcategories table exists
     const createSubCategoriesTableQuery = `
       CREATE TABLE IF NOT EXISTS subcategories (
           id INT AUTO_INCREMENT PRIMARY KEY,
           category_id INT NOT NULL,
           subcategory_name VARCHAR(255) NOT NULL,
+          sub_category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram',
           status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
           amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           stock INT NULL DEFAULT NULL,
@@ -113,6 +106,32 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createSubCategoriesTableQuery);
+
+    // Migration: Add sub_category_type column to subcategories table if missing
+    try {
+      await activePool.query(`ALTER TABLE subcategories ADD COLUMN sub_category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    // Migration: Copy category_type from categories to subcategories if categories.category_type exists
+    try {
+      await activePool.query(`
+        UPDATE subcategories s
+        JOIN categories c ON s.category_id = c.id
+        SET s.sub_category_type = c.category_type
+        WHERE c.category_type IS NOT NULL;
+      `);
+    } catch (err) {
+      // categories.category_type may have already been dropped, ignore error
+    }
+
+    // Migration: Drop category_type from categories table
+    try {
+      await activePool.query(`ALTER TABLE categories DROP COLUMN category_type;`);
+    } catch (err) {
+      // Column may already have been dropped, ignore error
+    }
 
     try {
       await activePool.query(`ALTER TABLE subcategories ADD COLUMN stock INT NULL DEFAULT NULL;`);
@@ -434,7 +453,7 @@ export async function initShopDb(): Promise<void> {
           price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           categoryName VARCHAR(255) NOT NULL DEFAULT '',
-          categoryType VARCHAR(50) NOT NULL DEFAULT '',
+          subCategoryType VARCHAR(50) NOT NULL DEFAULT 'gram',
           quantity FLOAT NOT NULL DEFAULT 1,
           createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -446,6 +465,25 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createOrderItemsTableQuery);
+
+    // Migration: Update OrderItems to use subCategoryType
+    try {
+      await activePool.query(`ALTER TABLE OrderItems ADD COLUMN subCategoryType VARCHAR(50) NOT NULL DEFAULT 'gram';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`UPDATE OrderItems SET subCategoryType = categoryType WHERE (subCategoryType IS NULL OR subCategoryType = '' OR subCategoryType = 'gram') AND categoryType IS NOT NULL AND categoryType != '';`);
+    } catch (err) {
+      // categoryType column may not exist, ignore error
+    }
+
+    try {
+      await activePool.query(`ALTER TABLE OrderItems DROP COLUMN categoryType;`);
+    } catch (err) {
+      // Column may already have been dropped, ignore error
+    }
 
     try {
       await activePool.query('RENAME TABLE orderStatus TO OrderStatus;');

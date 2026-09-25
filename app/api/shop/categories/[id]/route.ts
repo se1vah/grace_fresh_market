@@ -45,16 +45,11 @@ export async function PUT(
     const existingCategory = existingRows[0];
     const formData = await request.formData();
     const categoryName = (formData.get('category_name') as string || existingCategory.category_name).trim();
-    const categoryType = (formData.get('category_type') as string || existingCategory.category_type || 'gram').toLowerCase();
     const status = (formData.get('status') as string || existingCategory.status).toLowerCase();
     const imageFile = formData.get('image') as File | string | null;
 
     if (!categoryName) {
       return NextResponse.json({ error: 'Category name is required' }, { status: 400 });
-    }
-
-    if (!['gram', 'quantity'].includes(categoryType)) {
-      return NextResponse.json({ error: 'Category type must be gram or quantity' }, { status: 400 });
     }
 
     if (!['active', 'inactive'].includes(status)) {
@@ -127,8 +122,8 @@ export async function PUT(
     }
 
     await query(
-      'UPDATE categories SET category_name = ?, image = ?, category_type = ?, status = ? WHERE id = ?',
-      [categoryName, finalImagePath, categoryType, status, categoryId]
+      'UPDATE categories SET category_name = ?, image = ?, status = ? WHERE id = ?',
+      [categoryName, finalImagePath, status, categoryId]
     );
 
     return NextResponse.json({
@@ -138,7 +133,6 @@ export async function PUT(
         id: categoryId,
         category_name: categoryName,
         image: finalImagePath,
-        category_type: categoryType,
         status,
       },
     });

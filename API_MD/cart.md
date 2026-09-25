@@ -52,6 +52,7 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
       "subcategory": {
         "id": 4,
         "subcategoryName": "Organic Spinach",
+        "subCategoryType": "gram",
         "amount": 49.99,
         "stock": 50,
         "status": "active",
@@ -62,7 +63,6 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
         "category": {
           "id": 1,
           "categoryName": "Fresh Vegetables",
-          "categoryType": "gram",
           "status": "active"
         }
       },
@@ -118,6 +118,7 @@ Retrieves all active items in the specified user's shopping cart along with item
       "subcategory": {
         "id": 4,
         "subcategoryName": "Organic Spinach",
+        "subCategoryType": "gram",
         "amount": 49.99,
         "stock": 50,
         "status": "active",
@@ -128,7 +129,6 @@ Retrieves all active items in the specified user's shopping cart along with item
         "category": {
           "id": 1,
           "categoryName": "Fresh Vegetables",
-          "categoryType": "gram",
           "status": "active"
         }
       },
@@ -208,6 +208,7 @@ Adds or updates multiple items in the user's shopping cart in a single batch req
       "subcategory": {
         "id": 4,
         "subcategoryName": "Organic Spinach",
+        "subCategoryType": "gram",
         "amount": 49.99,
         "stock": 50,
         "offer": 10.00,
@@ -219,7 +220,6 @@ Adds or updates multiple items in the user's shopping cart in a single batch req
         "category": {
           "id": 1,
           "categoryName": "Fresh Vegetables",
-          "categoryType": "gram",
           "status": "active"
         }
       },

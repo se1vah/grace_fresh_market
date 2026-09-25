@@ -19,7 +19,6 @@ export interface CategorySimple {
   categoryName?: string;
   image?: string;
   status?: string;
-  category_type?: 'gram' | 'quantity' | string;
 }
 
 export interface SubCategoryData {
@@ -28,6 +27,8 @@ export interface SubCategoryData {
   category?: CategorySimple;
   subcategory_name: string;
   subcategoryName?: string;
+  subCategoryType?: 'gram' | 'quantity' | string;
+  sub_category_type?: 'gram' | 'quantity' | string;
   image: string;
   images?: string[];
   status: 'active' | 'inactive';
@@ -178,6 +179,7 @@ export default function SubCategoryTable({
                 <th className="py-3.5 px-4 sm:px-6 w-16">ID</th>
                 <th className="py-3.5 px-4 sm:px-6">Category</th>
                 <th className="py-3.5 px-4 sm:px-6">Item Name</th>
+                <th className="py-3.5 px-4 sm:px-6">Type</th>
                 <th className="py-3.5 px-4 sm:px-6">Image</th>
                 <th className="py-3.5 px-4 sm:px-6">Status</th>
                 <th className="py-3.5 px-4 sm:px-6">Stock</th>
@@ -218,6 +220,19 @@ export default function SubCategoryTable({
                       <div className="font-bold text-gray-900 group-hover:text-[#2D5A27] transition font-quicksand text-sm sm:text-base">
                         {subCat.subcategory_name || subCat.subcategoryName}
                       </div>
+                    </td>
+
+                    {/* SubCategory Type */}
+                    <td className="py-4 px-4 sm:px-6">
+                      {(subCat.subCategoryType || subCat.sub_category_type) === 'quantity' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 capitalize">
+                          Quantity
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#EAF2EA] text-[#2D5A27] border border-[#2D5A27]/20 capitalize">
+                          Gram
+                        </span>
+                      )}
                     </td>
 
                     {/* Image Thumbnail */}
@@ -387,6 +402,22 @@ export default function SubCategoryTable({
                     <ImageIcon className="w-4 h-4 text-gray-300" />
                   )}
                 </div>
+              </div>
+
+              {/* Field: Type */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-gray-400 uppercase tracking-wider font-quicksand">
+                  Type
+                </span>
+                {(subCat.subCategoryType || subCat.sub_category_type) === 'quantity' ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 capitalize">
+                    Quantity
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EAF2EA] text-[#2D5A27] border border-[#2D5A27]/20 capitalize">
+                    Gram
+                  </span>
+                )}
               </div>
 
               {/* Field: Status */}

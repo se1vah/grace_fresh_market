@@ -13,6 +13,7 @@ This document details the **SubCategory API endpoints** used in the Grace Fresh 
 | `id` | `number` | Auto | Primary key ID. |
 | `category_id` | `number` | Yes | Parent Category ID. Must belong to an active parent category. |
 | `subcategory_name` | `string` | Yes | Name of the item / subcategory. |
+| `sub_category_type` | `ENUM('gram', 'quantity')` | Yes | Measurement type of the item (`"gram"` or `"quantity"`). |
 | `status` | `string` | Yes | Status (`"active"` or `"inactive"`). |
 | `amount` | `number` | Yes | Price / base amount in INR currency. |
 | `stock` | `number` \| `null` | No | Optional available stock quantity (numbers only, non-negative whole number). |
@@ -58,6 +59,8 @@ Retrieves a paginated list of subcategories including associated parent category
       "id": 1,
       "subcategoryName": "Leafy Greens",
       "subcategory_name": "Leafy Greens",
+      "subCategoryType": "gram",
+      "sub_category_type": "gram",
       "image": "/images/subcategory/leafy-greens-1787510000000-1.jpg",
       "images": [
         "/images/subcategory/leafy-greens-1787510000000-1.jpg",
@@ -108,6 +111,7 @@ Creates a new subcategory item with multi-image upload support and optional nume
 | :--- | :--- | :--- | :--- |
 | `category_id` | `number` | Yes | Parent Category ID. |
 | `subcategory_name` | `string` | Yes | Name of the subcategory. |
+| `subCategoryType` | `string` | No | Measurement type: `"gram"` or `"quantity"` (Default: `"gram"`). |
 | `status` | `string` | No | `"active"` or `"inactive"` (Default: `"active"`). |
 | `amount` | `number` | Yes | Non-negative numeric amount. |
 | `stock` | `number` | No | Optional non-negative whole number. |
@@ -132,13 +136,13 @@ Updates an existing subcategory item, managing multi-image file retention/additi
 | :--- | :--- | :--- | :--- |
 | `category_id` | `number` | No | Updated Parent Category ID. |
 | `subcategory_name` | `string` | No | Updated subcategory item name. |
+| `subCategoryType` | `string` | No | Updated measurement type: `"gram"` or `"quantity"`. |
 | `status` | `string` | No | Updated status (`"active"` or `"inactive"`). |
 | `amount` | `number` | No | Updated price / amount. |
 | `stock` | `number` | No | Updated optional stock quantity. |
 | `offer` | `number` | No | Updated optional offer percentage (0 to 100). |
 | `existing_images` | `string[]` | No | List of existing relative image URL paths to retain. |
 | `images` | `File[]` | No | New image files to upload and append. |
-| `status` | `string` | No | Updated status (`"active"` or `"inactive"`). |
 
 ### Validation Rules
 - **Inactive State Restriction**: Setting `status` to `"inactive"` is rejected with `400 Bad Request` if any order containing this subcategory has an active status that is not `"delivered"` or `"cancelled"`.

@@ -173,9 +173,6 @@ export default function CategoryTable({
                   Image
                 </th>
                 <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  Type
-                </th>
-                <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
                   Status
                 </th>
                 <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 text-right">
@@ -217,19 +214,6 @@ export default function CategoryTable({
                         <ImageIcon className="w-5 h-5 text-gray-300" />
                       )}
                     </div>
-                  </td>
-
-                  {/* Type Badge */}
-                  <td className="px-6 py-4">
-                    {cat.category_type === 'quantity' ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 capitalize">
-                        Quantity
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#EAF2EA] text-[#2D5A27] border border-[#2D5A27]/20 capitalize">
-                        Gram
-                      </span>
-                    )}
                   </td>
 
                   {/* Status Badge */}
@@ -313,22 +297,6 @@ export default function CategoryTable({
                   <ImageIcon className="w-4 h-4 text-gray-300" />
                 )}
               </div>
-            </div>
-
-            {/* Field: Type */}
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-gray-400 uppercase tracking-wider font-quicksand">
-                Type
-              </span>
-              {cat.category_type === 'quantity' ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 capitalize">
-                  Quantity
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EAF2EA] text-[#2D5A27] border border-[#2D5A27]/20 capitalize">
-                  Gram
-                </span>
-              )}
             </div>
 
             {/* Field: Status */}

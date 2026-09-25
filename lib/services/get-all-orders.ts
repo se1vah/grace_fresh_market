@@ -35,13 +35,13 @@ export interface OrderAddress {
 export interface OrderCategory {
   id: number;
   categoryName: string;
-  categoryType: string;
   status?: string;
 }
 
 export interface OrderSubcategory {
   id: number;
   subcategoryName: string;
+  subCategoryType: string;
   amount: number;
   images: string[];
   category: OrderCategory;
@@ -51,6 +51,7 @@ export interface OrderItem {
   id: number;
   categoryId: number;
   subcategoryId: number;
+  subCategoryType?: string;
   quantity: number;
   itemTotal: number;
   subcategory: OrderSubcategory;
@@ -130,7 +131,8 @@ interface OrderItemRow {
   price: unknown;
   itemTotal?: unknown;
   categoryName: string;
-  categoryType: string;
+  subCategoryType?: string;
+  categoryType?: string;
   quantity: unknown;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -155,13 +157,13 @@ interface AddressRow {
 interface CategoryRow {
   id: number;
   category_name: string;
-  category_type: string;
   status: string;
 }
 
 interface SubcategoryRow {
   id: number;
   subcategory_name: string;
+  sub_category_type?: string;
   amount: unknown;
   category_id: number;
   status: string;
@@ -278,7 +280,6 @@ function formatSnapshotAddress(order: OrderRow): OrderAddress | null {
 function resolveCategory(
   categoryId: number,
   historicalName: string,
-  historicalType: string,
   categoryMap: Record<number, CategoryRow>
 ): OrderCategory {
   const live = categoryMap[categoryId];
@@ -286,7 +287,6 @@ function resolveCategory(
     return {
       id: live.id,
       categoryName: live.category_name,
-      categoryType: live.category_type,
       status: live.status,
     };
   }
@@ -294,7 +294,6 @@ function resolveCategory(
   return {
     id: categoryId,
     categoryName: historicalName || live?.category_name || '',
-    categoryType: historicalType || live?.category_type || '',
     ...(live ? { status: live.status } : {}),
   };
 }
@@ -396,7 +395,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
               price,
               itemTotal,
               categoryName,
-              categoryType,
+              subCategoryType,
               quantity,
               createdAt,
               updatedAt
@@ -445,7 +444,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
   const categoryRows =
     categoryIds.length > 0
       ? await query<CategoryRow[]>(
-        `SELECT id, category_name, category_type, status
+        `SELECT id, category_name, status
            FROM categories
            WHERE id IN (${inPlaceholders(categoryIds)})`,
         categoryIds
@@ -455,7 +454,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
   const subcategoryRows =
     subcategoryIds.length > 0
       ? await query<SubcategoryRow[]>(
-        `SELECT id, subcategory_name, amount, category_id, status
+        `SELECT id, subcategory_name, sub_category_type, amount, category_id, status
            FROM subcategories
            WHERE id IN (${inPlaceholders(subcategoryIds)})`,
         subcategoryIds
@@ -584,16 +583,19 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
       const liveSub = subcategoryMap[item.subcategoryId];
       const useLiveSub = liveSub && liveSub.status === 'active';
 
+      const historicalSubCategoryType = item.subCategoryType || item.categoryType || 'gram';
+      const subCategoryType = (useLiveSub ? liveSub.sub_category_type : historicalSubCategoryType) || 'gram';
+
       const category = resolveCategory(
         useLiveSub ? liveSub.category_id : item.categoryId,
         item.categoryName,
-        item.categoryType,
         categoryMap
       );
       const subcategory: OrderSubcategory = useLiveSub
         ? {
           id: liveSub.id,
           subcategoryName: liveSub.subcategory_name,
+          subCategoryType,
           amount: money(liveSub.amount),
           images: resolveSubcategoryImages(imagesMap[liveSub.id] || []),
           category,
@@ -601,6 +603,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         : {
           id: item.subcategoryId,
           subcategoryName: item.subcategoryName || liveSub?.subcategory_name || '',
+          subCategoryType,
           amount: historicalAmount,
           images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || []),
           category,
@@ -610,6 +613,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         id: item.id,
         categoryId: item.categoryId,
         subcategoryId: item.subcategoryId,
+        subCategoryType,
         quantity,
         itemTotal,
         subcategory,

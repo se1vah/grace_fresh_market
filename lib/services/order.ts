@@ -35,11 +35,12 @@ export interface OrderItemResponse {
   itemTotal: number;
   categoryId: number;
   categoryName: string;
-  categoryType: string;
+  subCategoryType: string;
   total: number;
   subcategory: {
     id: number;
     subcategoryName: string;
+    subCategoryType: string;
     amount: number;
     image: string[];
     stock: number | null;
@@ -47,7 +48,6 @@ export interface OrderItemResponse {
   category: {
     id: number;
     categoryName: string;
-    categoryType: string;
     categoryImage: string;
   };
 }
@@ -125,12 +125,12 @@ interface OrderCountRow extends mysql.RowDataPacket {
 interface SubcategoryWithCategoryRow extends mysql.RowDataPacket {
   subcategory_id: number;
   subcategory_name: string;
+  sub_category_type: string;
   amount: number | string;
   stock: number | string | null;
   subcategory_status: string;
   category_id: number | null;
   category_name: string | null;
-  category_type: string | null;
   category_image: string | null;
   category_status: string | null;
 }
@@ -241,7 +241,7 @@ export async function createOrderFromCart(
       newStock: number | null;
       categoryId: number;
       categoryName: string;
-      categoryType: string;
+      subCategoryType: string;
       categoryImage: string;
     }
   >();
@@ -259,12 +259,12 @@ export async function createOrderFromCart(
       `SELECT
           s.id AS subcategory_id,
           s.subcategory_name,
+          s.sub_category_type,
           s.amount,
           s.stock,
           s.status AS subcategory_status,
           c.id AS category_id,
           c.category_name,
-          c.category_type,
           c.image AS category_image,
           c.status AS category_status
        FROM subcategories s
@@ -320,7 +320,7 @@ export async function createOrderFromCart(
         newStock,
         categoryId: dbRow.category_id ? Number(dbRow.category_id) : 0,
         categoryName: dbRow.category_name || '',
-        categoryType: dbRow.category_type || 'gram',
+        subCategoryType: dbRow.sub_category_type || 'gram',
         categoryImage: dbRow.category_image || '',
       });
     }
@@ -523,7 +523,7 @@ export async function createOrderFromCart(
            subcategoryName,
            price,
            categoryName,
-           categoryType,
+           subCategoryType,
            quantity,
            itemTotal
          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -534,7 +534,7 @@ export async function createOrderFromCart(
           calc.subcategoryName,
           calc.price,
           calc.categoryName,
-          calc.categoryType,
+          calc.subCategoryType,
           item.quantity,
           calc.itemTotal,
         ]
@@ -661,11 +661,12 @@ export async function createOrderFromCart(
       itemTotal: calc.itemTotal,
       categoryId: calc.categoryId,
       categoryName: calc.categoryName,
-      categoryType: calc.categoryType,
+      subCategoryType: calc.subCategoryType,
       total: calc.price * calc.itemTotal,
       subcategory: {
         id: item.subcategoryId,
         subcategoryName: calc.subcategoryName,
+        subCategoryType: calc.subCategoryType,
         amount: calc.price,
         image: images,
         stock: calc.newStock,
@@ -673,7 +674,6 @@ export async function createOrderFromCart(
       category: {
         id: calc.categoryId,
         categoryName: calc.categoryName,
-        categoryType: calc.categoryType,
         categoryImage: calc.categoryImage,
       },
     };

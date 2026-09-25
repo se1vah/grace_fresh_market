@@ -13,7 +13,9 @@ import {
   ChevronDown,
   Percent,
   ImageIcon,
-  Check
+  Check,
+  Scale,
+  Package
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import { SubCategoryData, CategorySimple } from './SubCategoryTable';
@@ -56,6 +58,7 @@ export default function SubCategoryModal({
   // Form fields state
   const [categoryId, setCategoryId] = useState<string>('');
   const [subCategoryName, setSubCategoryName] = useState('');
+  const [subCategoryType, setSubCategoryType] = useState<'gram' | 'quantity'>('gram');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [amount, setAmount] = useState<string>('');
   const [stock, setStock] = useState<string>('');
@@ -140,6 +143,8 @@ export default function SubCategoryModal({
       if (subCategoryToEdit) {
         setCategoryId(String(subCategoryToEdit.category_id || subCategoryToEdit.category?.id || ''));
         setSubCategoryName(subCategoryToEdit.subcategory_name || subCategoryToEdit.subcategoryName || '');
+        const typeVal = (subCategoryToEdit.subCategoryType || subCategoryToEdit.sub_category_type || 'gram') as 'gram' | 'quantity';
+        setSubCategoryType(typeVal === 'quantity' ? 'quantity' : 'gram');
         setStatus(subCategoryToEdit.status || 'active');
         setAmount(subCategoryToEdit.amount !== undefined ? String(subCategoryToEdit.amount) : '');
         setStock(subCategoryToEdit.stock !== undefined && subCategoryToEdit.stock !== null ? String(subCategoryToEdit.stock) : '');
@@ -154,6 +159,7 @@ export default function SubCategoryModal({
       } else {
         setCategoryId(''); // Default to unselected
         setSubCategoryName('');
+        setSubCategoryType('gram');
         setStatus('active');
         setAmount('');
         setStock('');
@@ -296,6 +302,8 @@ export default function SubCategoryModal({
       const formData = new FormData();
       formData.append('category_id', categoryId);
       formData.append('subcategory_name', subCategoryName.trim());
+      formData.append('subCategoryType', subCategoryType);
+      formData.append('sub_category_type', subCategoryType);
       formData.append('status', status);
       formData.append('amount', amount.trim());
       formData.append('stock', stock.trim());
@@ -438,11 +446,6 @@ export default function SubCategoryModal({
                       <span className="font-semibold text-gray-900 truncate font-quicksand text-sm">
                         {selectedCategoryInfo.category_name || selectedCategoryInfo.categoryName}
                       </span>
-                      {selectedCategoryInfo.category_type && (
-                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-quicksand shrink-0">
-                          {selectedCategoryInfo.category_type}
-                        </span>
-                      )}
                     </>
                   ) : (
                     <div className="flex items-center gap-2 text-gray-400">
@@ -520,11 +523,6 @@ export default function SubCategoryModal({
                                     </span>
                                   )}
                                 </div>
-                                {cat.category_type && (
-                                  <span className="text-[10px] text-gray-400 font-nunito capitalize">
-                                    Type: {cat.category_type}
-                                  </span>
-                                )}
                               </div>
                             </div>
 
@@ -564,6 +562,38 @@ export default function SubCategoryModal({
                   }`}
               />
               <ModernFieldError message={errors.subcategoryName} />
+            </div>
+
+            {/* Item Measurement Type */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+                Item Type <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSubCategoryType('gram')}
+                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${subCategoryType === 'gram'
+                    ? 'bg-[#EAF2EA] border-[#2D5A27] text-[#2D5A27] ring-2 ring-[#2D5A27]/20 font-extrabold'
+                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  <Scale className="w-4 h-4 text-[#2D5A27]" />
+                  Gram
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSubCategoryType('quantity')}
+                  className={`py-2.5 px-4 rounded-xl border text-xs font-bold font-quicksand flex items-center justify-center gap-2 transition cursor-pointer ${subCategoryType === 'quantity'
+                    ? 'bg-blue-50 border-blue-600 text-blue-800 ring-2 ring-blue-600/20 font-extrabold'
+                    : 'bg-white border-[#E2EAE1] text-gray-600 hover:bg-gray-50'
+                    }`}
+                >
+                  <Package className="w-4 h-4 text-blue-600" />
+                  Quantity
+                </button>
+              </div>
             </div>
 
             {/* 3. Multi-Image Upload & Preview Grid */}

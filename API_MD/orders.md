@@ -149,10 +149,11 @@ All amounts, item totals, delivery fee, totals, category metadata, and stock are
         "itemTotal": 5,
         "categoryId": 3,
         "categoryName": "Fruits",
-        "categoryType": "gram",
+        "subCategoryType": "gram",
         "subcategory": {
           "id": 1,
           "subcategoryName": "Orange",
+          "subCategoryType": "gram",
           "amount": 5,
           "image": [
             "/images/subcategory/orange-1.jpg"
@@ -162,7 +163,6 @@ All amounts, item totals, delivery fee, totals, category metadata, and stock are
         "category": {
           "id": 3,
           "categoryName": "Fruits",
-          "categoryType": "gram",
           "categoryImage": "/images/category/fruits.jpg"
         }
       }
@@ -405,6 +405,7 @@ Authorization: Bearer <token>
           "subcategory": {
             "id": 5,
             "subcategoryName": "Tomato Local",
+            "subCategoryType": "gram",
             "amount": 25,
             "images": [
               "/images/subcategory/tomato-local-1.png",
@@ -413,7 +414,6 @@ Authorization: Bearer <token>
             "category": {
               "id": 1,
               "categoryName": "Vegetables",
-              "categoryType": "gram",
               "status": "active"
             }
           },
@@ -502,7 +502,7 @@ Allowed `OrderStatus.status` values:
 ### Category / Subcategory Fallback
 
 - If the category/subcategory still exists and `status` is `active`, current catalog data is returned in the nested objects.
-- If the record is missing or inactive, historical values from `OrderItems` are used (`categoryName`, `categoryType`, `subcategoryName`, `price`).
+- If the record is missing or inactive, historical values from `OrderItems` are used (`categoryName`, `subCategoryType`, `subcategoryName`, `price`).
 - `itemTotal` always uses the stored order-item amount, even when the nested subcategory shows a current price.
 
 ---
@@ -701,6 +701,7 @@ Authorization: Bearer <token>
         "subcategory": {
           "id": 5,
           "subcategoryName": "Tomato Local",
+          "subCategoryType": "gram",
           "amount": 25,
           "images": [
             "/images/subcategory/tomato-local-1.png"
@@ -708,7 +709,6 @@ Authorization: Bearer <token>
           "category": {
             "id": 1,
             "categoryName": "Vegetables",
-            "categoryType": "gram",
             "status": "active"
           }
         },
@@ -812,6 +812,6 @@ Authorization: Bearer <token>
   - `price` (`DECIMAL(10, 2) NOT NULL DEFAULT 0.00`)
   - `itemTotal` (`DECIMAL(10, 2) NOT NULL DEFAULT 0.00`)
   - `categoryName` (`VARCHAR(255) NOT NULL`)
-  - `categoryType` (`ENUM('gram', 'quantity') NOT NULL`)
+  - `subCategoryType` (`ENUM('gram', 'quantity') NOT NULL`)
   - `quantity` (`FLOAT NOT NULL DEFAULT 1`)
   - `createdAt`, `updatedAt` (`TIMESTAMP`)

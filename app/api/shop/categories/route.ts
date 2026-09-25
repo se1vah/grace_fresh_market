@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
     // Fetch category items
     const rawRows = await query<any[]>(
       search
-        ? `SELECT id, category_name, image, category_type, status, created_at, updated_at FROM categories WHERE category_name LIKE ? ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
-        : `SELECT id, category_name, image, category_type, status, created_at, updated_at FROM categories ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+        ? `SELECT id, category_name, image, status, created_at, updated_at FROM categories WHERE category_name LIKE ? ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
+        : `SELECT id, category_name, image, status, created_at, updated_at FROM categories ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
       search ? [searchPattern] : []
     );
 
@@ -84,20 +84,12 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const categoryName = (formData.get('category_name') as string || '').trim();
-    const categoryType = (formData.get('category_type') as string || 'gram').toLowerCase();
     const status = (formData.get('status') as string || 'active').toLowerCase();
     const imageFile = formData.get('image') as File | null;
 
     if (!categoryName) {
       return NextResponse.json(
         { error: 'Category name is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!['gram', 'quantity'].includes(categoryType)) {
-      return NextResponse.json(
-        { error: 'Category type must be gram or quantity' },
         { status: 400 }
       );
     }
@@ -144,8 +136,8 @@ export async function POST(request: NextRequest) {
     const publicImagePath = blob.url;
 
     const insertResult = await query<any>(
-      'INSERT INTO categories (category_name, image, category_type, status) VALUES (?, ?, ?, ?)',
-      [categoryName, publicImagePath, categoryType, status]
+      'INSERT INTO categories (category_name, image, status) VALUES (?, ?, ?)',
+      [categoryName, publicImagePath, status]
     );
 
     return NextResponse.json({
@@ -155,7 +147,6 @@ export async function POST(request: NextRequest) {
         id: insertResult.insertId,
         category_name: categoryName,
         image: publicImagePath,
-        category_type: categoryType,
         status,
       },
     });

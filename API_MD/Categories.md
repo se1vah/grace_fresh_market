@@ -39,7 +39,6 @@ Accept: application/json
       "id": 1,
       "category_name": "Fresh Vegetables",
       "image": "/images/category/fresh-vegetables-1787510000000.jpg",
-      "category_type": "gram",
       "status": "active",
       "created_at": "2026-08-23T18:00:00.000Z",
       "updated_at": "2026-08-23T18:00:00.000Z"
@@ -48,7 +47,6 @@ Accept: application/json
       "id": 2,
       "category_name": "Fresh Fruits",
       "image": "/images/category/fresh-fruits-1787510000000.jpg",
-      "category_type": "quantity",
       "status": "active",
       "created_at": "2026-08-23T18:05:00.000Z",
       "updated_at": "2026-08-23T18:05:00.000Z"
@@ -72,7 +70,6 @@ Accept: application/json
 | `data[].id` | `number` | Category primary key ID. |
 | `data[].category_name` | `string` | Name of the category. |
 | `data[].image` | `string` | Public relative URL of the category image asset. |
-| `data[].category_type` | `string` | Measurement type of the category (`"gram"` or `"quantity"`). |
 | `data[].status` | `string` | Status of the category (`"active"` or `"inactive"`). |
 | `data[].created_at` | `string` | ISO 8601 timestamp when category was created. |
 | `data[].updated_at` | `string` | ISO 8601 timestamp when category was last updated. |
@@ -85,7 +82,7 @@ Accept: application/json
 
 ## PUT `/api/shop/categories/:id`
 
-Updates category information, measurement type, image, and status.
+Updates category information, image, and status.
 
 ### Request Details
 - **HTTP Method**: `PUT`

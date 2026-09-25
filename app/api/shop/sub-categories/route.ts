@@ -16,23 +16,28 @@ function sanitizeSlug(text: string): string {
 }
 
 function formatSubCategoryRow(row: any, imagesList: string[] = []) {
+  const subCategoryType = row.sub_category_type || row.subCategoryType || 'gram';
   return {
     id: row.id,
     subcategoryName: row.subcategory_name,
+    subcategory_name: row.subcategory_name,
+    subCategoryType,
+    sub_category_type: subCategoryType,
     images: imagesList,
     status: row.status,
     amount: Number(row.amount),
     stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
     offer: Number(row.offer || 0),
     categoryId: row.category_id,
+    category_id: row.category_id,
     category: {
       id: row.category_id,
       categoryName: row.category_name,
+      category_name: row.category_name,
       image: row.category_image,
       status: row.category_status,
       createdAt: row.category_created_at,
       updatedAt: row.category_updated_at,
-      categoryType: row.category_type,
     },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -95,6 +100,7 @@ export async function GET(request: NextRequest) {
       s.id,
       s.category_id,
       s.subcategory_name,
+      s.sub_category_type,
       s.status,
       s.amount,
       s.stock,
@@ -105,8 +111,7 @@ export async function GET(request: NextRequest) {
       c.image as category_image,
       c.status as category_status,
       c.created_at as category_created_at,
-      c.updated_at as category_updated_at,
-      c.category_type as category_type
+      c.updated_at as category_updated_at
     `;
 
     const listSql = `SELECT ${selectFields}
@@ -186,6 +191,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const categoryIdRaw = formData.get('category_id') || formData.get('categoryId');
     const subcategoryName = (formData.get('subcategory_name') || formData.get('subcategoryName') || '').toString().trim();
+    const subCategoryType = (formData.get('subCategoryType') || formData.get('sub_category_type') || 'gram').toString().toLowerCase();
     const status = (formData.get('status') || 'active').toString().trim();
     const amountRaw = formData.get('amount');
     const stockRaw = formData.get('stock');
@@ -194,6 +200,13 @@ export async function POST(request: NextRequest) {
     if (!categoryIdRaw) {
       return NextResponse.json(
         { error: 'Category ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!['gram', 'quantity'].includes(subCategoryType)) {
+      return NextResponse.json(
+        { error: 'subCategoryType must be "gram" or "quantity"' },
         { status: 400 }
       );
     }
@@ -312,9 +325,9 @@ export async function POST(request: NextRequest) {
     const imagesJson = JSON.stringify(savedImagePaths);
 
     const insertResult = await query<any>(
-      `INSERT INTO subcategories (category_id, subcategory_name, status, amount, stock, offer) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [categoryId, subcategoryName, status, amount, stock, offer]
+      `INSERT INTO subcategories (category_id, subcategory_name, sub_category_type, status, amount, stock, offer) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [categoryId, subcategoryName, subCategoryType, status, amount, stock, offer]
     );
 
     const newSubCategoryId = insertResult.insertId;
