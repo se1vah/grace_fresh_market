@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { POST as handleAddCart } from '../route';
 
 /**
@@ -6,5 +6,16 @@ import { POST as handleAddCart } from '../route';
  * Alias endpoint for addCart API under /api/user/cart.
  */
 export async function POST(request: NextRequest) {
-  return handleAddCart(request);
+  try {
+    return await handleAddCart(request);
+  } catch (error: any) {
+    console.error('[POST /api/user/cart/add] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Failed to add item to cart',
+      },
+      { status: 500 }
+    );
+  }
 }

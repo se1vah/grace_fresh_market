@@ -7,23 +7,34 @@ import { GET as handleGetOrderById } from '../[id]/route';
  * Accepts orderId or id via URL search params (e.g. ?orderId=123 or ?id=123).
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const rawOrderId =
-    searchParams.get('orderId') ||
-    searchParams.get('order_id') ||
-    searchParams.get('id');
+  try {
+    const { searchParams } = request.nextUrl;
+    const rawOrderId =
+      searchParams.get('orderId') ||
+      searchParams.get('order_id') ||
+      searchParams.get('id');
 
-  if (!rawOrderId) {
+    if (!rawOrderId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Order ID is required as a query parameter (e.g., ?orderId=123 or ?id=123).',
+        },
+        { status: 400 }
+      );
+    }
+
+    return await handleGetOrderById(request, {
+      params: Promise.resolve({ id: rawOrderId }),
+    });
+  } catch (error: any) {
+    console.error('[GET /api/users/orders/get-by-id] Error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Order ID is required as a query parameter (e.g., ?orderId=123 or ?id=123).',
+        error: error?.message || 'Failed to retrieve order',
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
-
-  return handleGetOrderById(request, {
-    params: Promise.resolve({ id: rawOrderId }),
-  });
 }

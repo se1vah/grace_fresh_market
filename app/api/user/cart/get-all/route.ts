@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GET as handleGetAllCart } from '../route';
 
 /**
@@ -6,5 +6,16 @@ import { GET as handleGetAllCart } from '../route';
  * Alias endpoint for getAllCart API under /api/user/cart.
  */
 export async function GET(request: NextRequest) {
-  return handleGetAllCart(request);
+  try {
+    return await handleGetAllCart(request);
+  } catch (error: any) {
+    console.error('[GET /api/user/cart/get-all] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Failed to retrieve cart items',
+      },
+      { status: 500 }
+    );
+  }
 }

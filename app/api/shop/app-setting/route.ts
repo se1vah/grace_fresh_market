@@ -182,10 +182,26 @@ async function handleUpdateSetting(request: NextRequest) {
 
 // PUT /api/shop/app-setting
 export async function PUT(request: NextRequest) {
-  return handleUpdateSetting(request);
+  try {
+    return await handleUpdateSetting(request);
+  } catch (error: any) {
+    console.error('Error updating app settings (PUT):', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update app settings' },
+      { status: 500 }
+    );
+  }
 }
 
 // POST /api/shop/app-setting (Support both PUT and POST methods)
 export async function POST(request: NextRequest) {
-  return handleUpdateSetting(request);
+  try {
+    return await handleUpdateSetting(request);
+  } catch (error: any) {
+    console.error('Error updating app settings (POST):', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update app settings' },
+      { status: 500 }
+    );
+  }
 }

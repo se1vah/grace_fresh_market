@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { POST as handleCreateOrder } from '../route';
 
 /**
@@ -6,5 +6,16 @@ import { POST as handleCreateOrder } from '../route';
  * Alias endpoint for createOrder API.
  */
 export async function POST(request: NextRequest) {
-  return handleCreateOrder(request);
+  try {
+    return await handleCreateOrder(request);
+  } catch (error: any) {
+    console.error('[POST /api/user/orders/create] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Failed to create order',
+      },
+      { status: 500 }
+    );
+  }
 }

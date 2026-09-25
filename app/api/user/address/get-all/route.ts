@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GET as handleGet } from '../route';
 
 /**
@@ -6,5 +6,16 @@ import { GET as handleGet } from '../route';
  * Retrieves all user addresses for the authenticated user or specified userId parameter.
  */
 export async function GET(request: NextRequest) {
-  return handleGet(request);
+  try {
+    return await handleGet(request);
+  } catch (error: any) {
+    console.error('[GET /api/user/address/get-all] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Failed to retrieve addresses',
+      },
+      { status: 500 }
+    );
+  }
 }
