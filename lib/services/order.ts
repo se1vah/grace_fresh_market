@@ -6,7 +6,9 @@ import { userPushNotification } from '@/lib/notifications/userPushNotification';
 export {
   getActiveOrderForSubcategory,
   getActiveOrderForCategory,
+  getActiveOrdersForUser,
   type ActiveOrderCheckResult,
+  type UserActiveOrderCheckResult,
 } from '@/lib/services/order-status-check';
 
 export class OrderError extends Error {

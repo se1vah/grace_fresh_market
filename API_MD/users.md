@@ -185,35 +185,115 @@ Retrieves details for registered user(s), including full name, email address, ph
 
 ---
 
-### Error Responses
+## 5. DELETE `/api/user/delete/:userId` (or `/api/users/delete/:userId`)
 
-#### 1. Validation Error (`400 Bad Request`)
+Permanently hard deletes a user account and all associated relational data from the database and storage.
 
-When required fields (`email` or `password`) are missing during login/registration:
+### Pre-Condition: Active Order Check
+Before deletion, the API checks whether the user has any **active orders** (orders whose latest status is **not** `delivered` or `cancelled`).
+- **If active orders exist**: The request is **rejected** with HTTP `400 Bad Request`, detailing the active order IDs and their current statuses.
+- **If no active orders exist** (or only terminal `delivered`/`cancelled` orders exist): All user data is permanently hard deleted in an atomic database transaction.
+
+### Hard Deletion Scope
+The hard delete permanently cascades across all tables:
+1. `Notification` (both order-related and general user notifications)
+2. `OrderStatus` (order status history entries for all user orders)
+3. `OrderItems` (all line items belonging to user orders)
+4. `` `Order` `` (user order master records)
+5. `cart` (all cart items for this user)
+6. `user_addresses` (all saved delivery addresses)
+7. `userLogin` (all active authentication sessions and FCM push tokens)
+8. `users` (the user profile record)
+9. Storage: Profile photo file permanently deleted from Vercel Blob / server disk.
+
+### Request Details
+- **HTTP Method**: `DELETE` (also accepts `POST`)
+- **URL Path**: `/api/user/delete/:userId` (or `/api/users/delete/:userId`)
+- **Query / Body Alternative**: `/api/user/delete?userId=:userId` or `{ "userId": 123 }`
+- **Authentication**:
+  - **Shop Admin**: Shop cookie (`shop_token`) or `Authorization: Bearer <shop_token>`. Allowed to delete any user.
+  - **Customer**: User cookie (`user_token`) or `Authorization: Bearer <user_token>`. Allowed to delete their own account.
+  - Rejects with `403 Forbidden` if a logged-in customer attempts to delete another customer's ID.
+
+### Example Request
+`DELETE /api/user/delete/4`
+
+---
+
+### Example Successful Response (`200 OK`)
+
+When the user exists and has no active orders:
 
 ```json
 {
-  "error": "Email is required."
+  "success": true,
+  "message": "User and all associated data permanently deleted successfully.",
+  "deletedUser": {
+    "id": 4,
+    "fullName": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "phoneNumber": "+1234567890"
+  },
+  "deletedCounts": {
+    "user": 1,
+    "orders": 2,
+    "orderItems": 5,
+    "orderStatuses": 6,
+    "notifications": 4,
+    "cartItems": 3,
+    "addresses": 2,
+    "sessions": 1
+  }
 }
 ```
 
-#### 2. Authentication Error (`401 Unauthorized`)
+---
 
-When email is not registered or password does not match during login:
+### Example Active Order Conflict Response (`400 Bad Request`)
+
+When the user has one or more orders in active status (`ordered`, `packed`, or `out for delivery`):
 
 ```json
 {
-  "error": "Invalid email or password."
+  "success": false,
+  "error": "Cannot delete user because order #12 is currently in 'packed' status. All orders must be delivered or cancelled first.",
+  "message": "Cannot delete user because order #12 is currently in 'packed' status. All orders must be delivered or cancelled first.",
+  "code": "USER_HAS_ACTIVE_ORDERS",
+  "hasActiveOrders": true,
+  "activeOrdersCount": 1,
+  "activeOrders": [
+    {
+      "orderId": 12,
+      "status": "packed",
+      "createdAt": "2026-09-27T10:15:00.000Z"
+    }
+  ]
 }
 ```
 
-#### 3. Internal Server Error (`500 Internal Server Error`)
+---
 
-When a database connection or server error occurs:
+### Example User Not Found Response (`404 Not Found`)
 
 ```json
 {
-  "error": "An unexpected authentication error occurred."
+  "success": false,
+  "error": "User not found.",
+  "message": "User not found.",
+  "code": "USER_NOT_FOUND"
+}
+```
+
+---
+
+### Example Unauthorized / Forbidden Response (`403 Forbidden`)
+
+When a logged-in user tries to delete another user's account:
+
+```json
+{
+  "success": false,
+  "error": "You are not authorized to delete another user's account."
 }
 ```
 
@@ -223,3 +303,4 @@ When a database connection or server error occurs:
 
 - **`users` table**: Stores `id`, `fullName`, `email`, `phoneNumber`, hashed `password`, `created_at`, `updated_at`.
 - **`userLogin` table**: Stores `id`, `user_id` (foreign key to `users.id`), `token` (JWT string), `fcmToken` (Firebase Cloud Messaging push notification device token), and `created_at`. Every successful registration or login inserts a new active session record into `userLogin` along with the provided `fcmToken`. On logout, the token session is deleted from `userLogin`.
+- **Hard Deletion**: Deleting via `/api/user/delete/:userId` permanently purges the user from `users`, `userLogin`, `cart`, `user_addresses`, `Order`, `OrderItems`, `OrderStatus`, `Notification`, and removes any uploaded profile images from blob storage.

@@ -20,7 +20,8 @@ import {
   Check,
   Building,
   Navigation,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import type { CustomerSummary } from '@/app/api/shop/customers/route';
@@ -29,12 +30,14 @@ interface CustomerDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: CustomerSummary | null;
+  onDelete?: (customer: CustomerSummary) => void;
 }
 
 export default function CustomerDetailsModal({
   isOpen,
   onClose,
   customer,
+  onDelete,
 }: CustomerDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses'>('profile');
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -441,7 +444,23 @@ export default function CustomerDetailsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-[#F9FBF9] border-t border-[#E2EAE1] flex justify-end shrink-0">
+        <div className="p-4 bg-[#F9FBF9] border-t border-[#E2EAE1] flex items-center justify-between shrink-0">
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onDelete(customer);
+              }}
+              className="px-4 py-2 rounded-xl border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-quicksand font-bold text-xs sm:text-sm flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+              <span>Delete Customer</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-quicksand font-bold text-xs sm:text-sm transition cursor-pointer"

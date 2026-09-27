@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import SearchInput from '@/components/common/SearchInput';
 import CustomersTable from '@/components/shop/customers/CustomersTable';
+import DeleteCustomerModal from '@/components/shop/customers/DeleteCustomerModal';
 import type { CustomerSummary } from '@/app/api/shop/customers/route';
 
 interface CustomerStats {
@@ -36,6 +37,36 @@ export default function CustomerManagementPage() {
 
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'with-orders' | 'no-orders'>('all');
+
+  // Delete Customer Modal state
+  const [customerToDelete, setCustomerToDelete] = useState<CustomerSummary | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }, []);
+
+  const handleDeleteCustomer = useCallback((customer: CustomerSummary) => {
+    setCustomerToDelete(customer);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleDeleteSuccess = useCallback(
+    (deletedCustomer: CustomerSummary) => {
+      showToast(
+        `Customer "${deletedCustomer.fullName || `#CUST-${deletedCustomer.id}`}" was deleted successfully.`
+      );
+      setIsDeleteModalOpen(false);
+      setCustomerToDelete(null);
+      fetchCustomers();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val);
@@ -280,6 +311,14 @@ export default function CustomerManagementPage() {
         </div>
       </div>
 
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 bg-[#2D5A27] text-white font-quicksand font-bold text-xs sm:text-sm rounded-xl shadow-xl animate-in slide-in-from-top-3 duration-300">
+          <CheckCircle2 className="w-4 h-4 text-[#80C34A] shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Customers Table Component */}
       <CustomersTable
         customers={customers}
@@ -288,6 +327,15 @@ export default function CustomerManagementPage() {
         searchQuery={search}
         selectedFilter={selectedFilter}
         onRetry={fetchCustomers}
+        onDelete={handleDeleteCustomer}
+      />
+
+      {/* Modern Delete Customer Confirmation Modal */}
+      <DeleteCustomerModal
+        isOpen={isDeleteModalOpen}
+        customer={customerToDelete}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

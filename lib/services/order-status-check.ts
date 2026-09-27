@@ -77,3 +77,60 @@ export async function getActiveOrderForCategory(
 
   return { hasActiveOrders: false };
 }
+
+export interface UserActiveOrderCheckResult {
+  hasActiveOrders: boolean;
+  activeOrders: Array<{
+    orderId: number;
+    status: string;
+    createdAt?: Date | string;
+  }>;
+  orderId?: number;
+  status?: string;
+}
+
+/**
+ * Checks if there are any active orders (whose latest status is not 'delivered' or 'cancelled')
+ * belonging to the specified user ID.
+ */
+export async function getActiveOrdersForUser(
+  userId: number
+): Promise<UserActiveOrderCheckResult> {
+  const rows = await query<any[]>(
+    `SELECT o.id AS orderId, COALESCE(latest_status.status, 'ordered') AS current_status, o.createdAt
+     FROM \`Order\` o
+     LEFT JOIN (
+         SELECT os1.orderId, os1.status
+         FROM OrderStatus os1
+         INNER JOIN (
+             SELECT orderId, MAX(id) AS max_id
+             FROM OrderStatus
+             GROUP BY orderId
+         ) os2 ON os1.id = os2.max_id
+     ) latest_status ON o.id = latest_status.orderId
+     WHERE o.userId = ?
+       AND LOWER(TRIM(COALESCE(latest_status.status, 'ordered'))) NOT IN ('delivered', 'cancelled', 'canceled', 'deliverd')
+     ORDER BY o.id DESC`,
+    [userId]
+  );
+
+  if (rows && rows.length > 0) {
+    const activeOrders = rows.map((r) => ({
+      orderId: Number(r.orderId),
+      status: String(r.current_status),
+      createdAt: r.createdAt,
+    }));
+
+    return {
+      hasActiveOrders: true,
+      activeOrders,
+      orderId: activeOrders[0].orderId,
+      status: activeOrders[0].status,
+    };
+  }
+
+  return {
+    hasActiveOrders: false,
+    activeOrders: [],
+  };
+}

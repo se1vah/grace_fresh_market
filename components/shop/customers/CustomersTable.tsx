@@ -17,7 +17,8 @@ import {
   Package,
   ShoppingCart,
   Eye,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react';
 import type { CustomerSummary } from '@/app/api/shop/customers/route';
 import CustomerDetailsModal from './CustomerDetailsModal';
@@ -30,6 +31,7 @@ interface CustomersTableProps {
   searchQuery: string;
   selectedFilter: string;
   onRetry: () => void;
+  onDelete?: (customer: CustomerSummary) => void;
 }
 
 export default function CustomersTable({
@@ -39,6 +41,7 @@ export default function CustomersTable({
   searchQuery,
   selectedFilter,
   onRetry,
+  onDelete,
 }: CustomersTableProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null);
   const [page, setPage] = useState(1);
@@ -323,18 +326,35 @@ export default function CustomersTable({
 
                     {/* 6. Actions */}
                     <td className="py-4 px-6 align-top text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCustomer(customer);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF2EA] border border-[#E2EAE1] hover:border-[#2D5A27] text-[#2D5A27] font-quicksand font-bold text-xs inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
-                        title="View Customer Profile"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>View</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCustomer(customer);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#EAF2EA] border border-[#E2EAE1] hover:border-[#2D5A27] text-[#2D5A27] font-quicksand font-bold text-xs inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
+                          title="View Customer Profile"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+
+                        {onDelete && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(customer);
+                            }}
+                            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-red-50 border border-[#E2EAE1] hover:border-red-200 text-gray-400 hover:text-red-600 font-quicksand font-bold text-xs inline-flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                            title="Delete Customer Account"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="hidden xl:inline">Delete</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -387,17 +407,33 @@ export default function CustomersTable({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCustomer(customer);
-                  }}
-                  className="p-2 rounded-xl bg-[#F2F7F2] text-[#2D5A27] hover:bg-[#EAF2EA] transition"
-                  title="View Profile"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCustomer(customer);
+                    }}
+                    className="p-2 rounded-xl bg-[#F2F7F2] text-[#2D5A27] hover:bg-[#EAF2EA] transition cursor-pointer"
+                    title="View Profile"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(customer);
+                      }}
+                      className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+                      title="Delete Customer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Contact Information */}
@@ -465,6 +501,7 @@ export default function CustomersTable({
         isOpen={Boolean(selectedCustomer)}
         onClose={() => setSelectedCustomer(null)}
         customer={selectedCustomer}
+        onDelete={onDelete}
       />
     </div>
   );
