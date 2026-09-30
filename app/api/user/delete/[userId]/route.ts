@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { hardDeleteUser, UserDeleteError } from '@/lib/services/delete-user';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { getUserIdFromRequest, USER_COOKIE_NAME } from '@/lib/auth/user-jwt';
+import { emitSocketEvent } from '@/lib/socket';
 
 async function authenticateShop(request: NextRequest) {
   const cookieStore = await cookies();
@@ -73,6 +74,10 @@ export async function DELETE(
         maxAge: 0,
         httpOnly: true,
       });
+    }
+
+    if (shopAdmin) {
+      emitSocketEvent(`shop-delete-user`, { userId: parsedUserId });
     }
 
     return response;
