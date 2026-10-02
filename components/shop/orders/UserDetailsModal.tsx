@@ -52,6 +52,9 @@ export default function UserDetailsModal({ isOpen, onClose, order }: UserDetails
     }
   };
 
+  const orderDiscount =
+    order.items?.reduce((acc, it) => acc + (Number(it.discountAmount) || 0), 0) || 0;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-xl">
       <div className="bg-white rounded-2xl overflow-hidden font-nunito">
@@ -223,11 +226,23 @@ export default function UserDetailsModal({ isOpen, onClose, order }: UserDetails
           </div>
 
           {/* Associated Order Snapshot */}
-          <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-emerald-950 font-medium">
+          <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs text-emerald-950 font-medium flex-wrap">
               <ShoppingBag className="w-4 h-4 text-[#2D5A27]" />
               <span>Current Order Total:</span>
-              <strong className="text-sm font-bold text-[#2D5A27]">₹{order.total.toFixed(2)}</strong>
+              <div className="flex items-baseline gap-1.5">
+                <strong className="text-sm font-bold text-[#2D5A27]">₹{order.total.toFixed(2)}</strong>
+                {orderDiscount > 0 && (
+                  <span className="text-xs text-gray-400 line-through font-quicksand font-semibold">
+                    ₹{(order.total + orderDiscount).toFixed(2)}
+                  </span>
+                )}
+              </div>
+              {orderDiscount > 0 && (
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded">
+                  Discount: -₹{orderDiscount.toFixed(2)}
+                </span>
+              )}
             </div>
             <div className="text-xs font-bold text-gray-500">
               {order.items.length} {order.items.length === 1 ? 'item' : 'items'} ({formatOrderItemsSummary(order.items, order.totalItems)})

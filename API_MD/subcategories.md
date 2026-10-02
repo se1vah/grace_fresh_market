@@ -67,7 +67,10 @@ Retrieves a paginated list of subcategories including associated parent category
         "/images/subcategory/leafy-greens-1787510000000-2.jpg"
       ],
       "status": "active",
-      "amount": 49.99,
+      "amount": 100,
+      "offer": 5,
+      "discountAmount": 5,
+      "finalAmount": 95,
       "stock": 50,
       "categoryId": 1,
       "category_id": 1,

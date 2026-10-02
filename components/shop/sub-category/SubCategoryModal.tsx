@@ -793,6 +793,24 @@ export default function SubCategoryModal({
               <ModernFieldError message={errors.offer} />
             </div>
 
+            {/* Live Pricing Preview when Offer is applied */}
+            {amount && Number(amount) > 0 && offer && Number(offer) > 0 && Number(offer) <= 100 && (
+              <div className="p-3.5 rounded-xl bg-[#F2F7F2] border border-[#C5DEC3] flex items-center justify-between text-xs font-nunito flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 font-semibold">Pricing Preview:</span>
+                  <span className="text-gray-400 line-through font-bold font-quicksand">
+                    ₹{Number(amount).toFixed(2)}
+                  </span>
+                  <span className="text-sm font-extrabold text-[#2D5A27] font-quicksand">
+                    ₹{Math.max(0, Number(amount) - ((Number(amount) * Number(offer)) / 100)).toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-xs font-bold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-md font-quicksand">
+                  Discount: ₹{((Number(amount) * Number(offer)) / 100).toFixed(2)} ({Number(offer)}% OFF)
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Modal Actions Footer */}

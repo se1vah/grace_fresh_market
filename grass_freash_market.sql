@@ -87,6 +87,7 @@ CREATE TABLE `subcategories` (
   `image` varchar(500) NOT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
   `amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `offer` decimal(5,2) NOT NULL DEFAULT '0.00',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

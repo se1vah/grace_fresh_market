@@ -48,12 +48,19 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
       "userId": 1,
       "subcategoryId": 4,
       "quantity": 2,
-      "itemTotal": 99.98,
+      "amount": 100,
+      "offer": 5,
+      "discountAmount": 10,
+      "finalAmount": 95,
+      "itemTotal": 190,
       "subcategory": {
         "id": 4,
         "subcategoryName": "Organic Spinach",
         "subCategoryType": "gram",
-        "amount": 49.99,
+        "amount": 100,
+        "offer": 5,
+        "discountAmount": 5,
+        "finalAmount": 95,
         "stock": 50,
         "status": "active",
         "images": [
@@ -73,8 +80,10 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
   "cartSummary": {
     "totalItems": 2,
     "itemCount": 1,
-    "totalAmount": 99.98,
-    "deliveryFee": 40
+    "totalAmount": 190,
+    "subTotal": 190,
+    "deliveryFee": 40,
+    "total": 230
   }
 }
 ```

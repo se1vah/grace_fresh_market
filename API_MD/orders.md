@@ -143,18 +143,24 @@ All amounts, item totals, delivery fee, totals, category metadata, and stock are
         "subcategoryImage": [
           "/images/subcategory/orange-1.jpg"
         ],
-        "quantity": 1,
-        "price": 5,
-        "amount": 5,
-        "itemTotal": 5,
+        "quantity": 2,
+        "amount": 100,
+        "offer": 5,
+        "discountAmount": 10,
+        "finalAmount": 95,
+        "itemTotal": 190,
         "categoryId": 3,
         "categoryName": "Fruits",
         "subCategoryType": "gram",
+        "total": 190,
         "subcategory": {
           "id": 1,
           "subcategoryName": "Orange",
           "subCategoryType": "gram",
-          "amount": 5,
+          "amount": 100,
+          "offer": 5,
+          "discountAmount": 5,
+          "finalAmount": 95,
           "image": [
             "/images/subcategory/orange-1.jpg"
           ],
@@ -401,12 +407,19 @@ Authorization: Bearer <token>
           "categoryId": 1,
           "subcategoryId": 5,
           "quantity": 2,
-          "itemTotal": 50,
+          "amount": 100,
+          "offer": 5,
+          "discountAmount": 10,
+          "finalAmount": 95,
+          "itemTotal": 190,
           "subcategory": {
             "id": 5,
             "subcategoryName": "Tomato Local",
             "subCategoryType": "gram",
-            "amount": 25,
+            "amount": 100,
+            "offer": 5,
+            "discountAmount": 5,
+            "finalAmount": 95,
             "images": [
               "/images/subcategory/tomato-local-1.png",
               "/images/subcategory/tomato-local-2.png"
@@ -475,8 +488,12 @@ Each object in `data` includes:
 | `categoryId` | `number` | Historical category ID stored on the item. |
 | `subcategoryId` | `number` | Historical subcategory ID stored on the item. |
 | `quantity` | `number` | Ordered quantity. |
-| `itemTotal` | `number` | Stored item total from `OrderItems`. |
-| `subcategory` | `object` | Nested subcategory, images, and category. |
+| `amount` | `number` | Original base price per unit. |
+| `offer` | `number` | Offer discount percentage (0 - 100). |
+| `discountAmount` | `number` | **Total discount based on total quantity**: `unitDiscountAmount * quantity`. |
+| `finalAmount` | `number` | Customer selling price per unit: `amount - unitDiscountAmount`. |
+| `itemTotal` | `number` | Stored item total: `finalAmount * quantity`. |
+| `subcategory` | `object` | Nested subcategory (contains `amount`, `offer`, unit `discountAmount`, and `finalAmount`), images, and category. |
 | `createdAt` / `updatedAt` | `string` | Line-item timestamps. |
 
 ### Order status values & Sequential Workflow

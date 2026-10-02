@@ -97,6 +97,20 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
     return '/logo.png';
   };
 
+  const totalDiscountAmount =
+    order.items?.reduce((sum, item) => sum + (Number(item.discountAmount) || 0), 0) || 0;
+  const originalSubtotal =
+    order.items?.reduce((sum, item) => {
+      const origUnit =
+        Number(item.amount) ||
+        Number((item as any).subcategory?.amount) ||
+        Number(item.finalAmount) ||
+        0;
+      const qty = Number(item.quantity) || 1;
+      return sum + origUnit * qty;
+    }, 0) || (order.subTotal + totalDiscountAmount);
+  const originalTotal = Number((originalSubtotal + (order.deliveryFee || 0)).toFixed(2));
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-2xl">
       <div className="bg-white rounded-2xl overflow-hidden font-nunito flex flex-col max-h-[85vh]">
@@ -129,9 +143,21 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
 
             <div className="text-left sm:text-right">
               <div className="text-xs uppercase tracking-wider text-[#D1E6CE] font-semibold">Total Amount</div>
-              <div className="text-xl sm:text-2xl font-black font-quicksand text-white">
-                ₹{order.total.toFixed(2)}
+              <div className="flex items-baseline sm:justify-end gap-1.5">
+                <div className="text-xl sm:text-2xl font-black font-quicksand text-white">
+                  ₹{order.total.toFixed(2)}
+                </div>
+                {totalDiscountAmount > 0 && (
+                  <span className="text-xs sm:text-sm text-[#D1E6CE]/80 line-through font-quicksand font-bold">
+                    ₹{originalTotal.toFixed(2)}
+                  </span>
+                )}
               </div>
+              {totalDiscountAmount > 0 && (
+                <div className="text-[11px] text-[#A6E39D] font-bold font-quicksand">
+                  Total Discount: -₹{totalDiscountAmount.toFixed(2)}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -159,7 +185,28 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                   const categoryName = item.subcategory?.category?.categoryName || 'Produce';
                   const subCategoryType = item.subcategory?.subCategoryType || (item as any).subCategoryType;
 
-                  const unitPrice = item.subcategory?.amount ?? (item.quantity > 0 ? item.itemTotal / item.quantity : 0);
+                  const unitFinalPrice =
+                    (item as any).finalAmount ??
+                    (item as any).price ??
+                    item.subcategory?.finalAmount ??
+                    item.subcategory?.amount ??
+                    (item.quantity > 0 ? item.itemTotal / item.quantity : 0);
+
+                  const unitOriginalPrice =
+                    item.amount ??
+                    (item as any).subcategory?.amount ??
+                    unitFinalPrice;
+
+                  const itemDiscount =
+                    item.discountAmount !== undefined && item.discountAmount !== null && Number(item.discountAmount) > 0
+                      ? Number(item.discountAmount)
+                      : (unitOriginalPrice > unitFinalPrice
+                          ? Number(((unitOriginalPrice - unitFinalPrice) * item.quantity).toFixed(2))
+                          : 0);
+
+                  const originalItemTotal = Number((unitOriginalPrice * item.quantity).toFixed(2));
+                  const hasItemDiscount = itemDiscount > 0;
+                  const offerVal = (item as any).offer ?? item.subcategory?.offer;
 
                   return (
                     <div
@@ -183,23 +230,45 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                           <h5 className="text-sm font-bold text-gray-900 truncate font-quicksand">
                             {subcategoryName}
                           </h5>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5 flex-wrap">
                             <span className="inline-block px-2 py-0.2 rounded-md bg-[#EAF2EA] text-[#2D5A27] font-semibold text-[11px]">
                               {categoryName}
                               {subCategoryType ? ` (${subCategoryType})` : ''}
                             </span>
+                            {offerVal && Number(offerVal) > 0 ? (
+                              <span className="inline-block px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 font-bold text-[10px] border border-amber-200/80">
+                                {Number(offerVal)}% OFF
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
 
                       {/* Right: Quantity, Rate, Item Total */}
                       <div className="text-right shrink-0">
-                        <div className="text-xs text-gray-600 font-semibold font-quicksand">
-                          {formatOrderItemRate(item.quantity, unitPrice, subCategoryType)}
+                        <div className="text-xs text-gray-600 font-semibold font-quicksand flex items-center justify-end gap-1.5 flex-wrap">
+                          <span>{formatOrderItemRate(item.quantity, unitFinalPrice, subCategoryType)}</span>
+                          {hasItemDiscount && unitOriginalPrice > unitFinalPrice && (
+                            <span className="text-[11px] text-gray-400 line-through">
+                              ₹{unitOriginalPrice.toFixed(2)}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-sm font-bold text-gray-900 font-quicksand mt-0.5">
-                          ₹{item.itemTotal.toFixed(2)}
+                        <div className="flex items-baseline justify-end gap-1.5 mt-0.5">
+                          {hasItemDiscount && (
+                            <span className="text-xs text-gray-400 line-through font-quicksand">
+                              ₹{originalItemTotal.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-sm font-bold text-gray-900 font-quicksand">
+                            ₹{item.itemTotal.toFixed(2)}
+                          </span>
                         </div>
+                        {hasItemDiscount && (
+                          <div className="text-[11px] font-bold text-emerald-600 font-quicksand mt-0.5">
+                            Discount: -₹{itemDiscount.toFixed(2)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -271,8 +340,22 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
               <div className="p-4 rounded-xl bg-[#F9FBF9] border border-[#E2EAE1] space-y-2.5">
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Items Subtotal:</span>
-                  <span className="font-bold text-gray-800">₹{order.subTotal.toFixed(2)}</span>
+                  <div className="flex items-center gap-1.5">
+                    {totalDiscountAmount > 0 && (
+                      <span className="text-gray-400 line-through text-[11px] font-quicksand">
+                        ₹{originalSubtotal.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="font-bold text-gray-800">₹{order.subTotal.toFixed(2)}</span>
+                  </div>
                 </div>
+
+                {totalDiscountAmount > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-700 bg-emerald-50/80 px-2.5 py-1.5 rounded-lg border border-emerald-200/60 font-semibold">
+                    <span>Total Discount:</span>
+                    <span className="font-bold font-quicksand">-₹{totalDiscountAmount.toFixed(2)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Delivery Fee:</span>
@@ -290,9 +373,16 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
 
                 <div className="pt-2.5 border-t border-[#E2EAE1] flex justify-between items-center">
                   <span className="font-bold font-quicksand text-sm text-gray-900">Final Total:</span>
-                  <span className="font-black font-quicksand text-lg text-[#2D5A27]">
-                    ₹{order.total.toFixed(2)}
-                  </span>
+                  <div className="text-right">
+                    {totalDiscountAmount > 0 && (
+                      <span className="text-xs text-gray-400 line-through font-quicksand block leading-none mb-0.5">
+                        ₹{originalTotal.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="font-black font-quicksand text-lg text-[#2D5A27]">
+                      ₹{order.total.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

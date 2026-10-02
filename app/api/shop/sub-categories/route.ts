@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { uploadFile } from '@/lib/blob';
+import { calculatePricing, validateOffer } from '@/lib/pricing';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -17,6 +18,7 @@ function sanitizeSlug(text: string): string {
 
 function formatSubCategoryRow(row: any, imagesList: string[] = []) {
   const subCategoryType = row.sub_category_type || row.subCategoryType || 'gram';
+  const pricing = calculatePricing(row.amount, row.offer);
   return {
     id: row.id,
     subcategoryName: row.subcategory_name,
@@ -25,9 +27,11 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
     sub_category_type: subCategoryType,
     images: imagesList,
     status: row.status,
-    amount: Number(row.amount),
+    amount: pricing.amount,
+    offer: pricing.offer,
+    discountAmount: pricing.discountAmount,
+    finalAmount: pricing.finalAmount,
     stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
-    offer: Number(row.offer || 0),
     categoryId: row.category_id,
     category_id: row.category_id,
     category: {
@@ -270,14 +274,14 @@ export async function POST(request: NextRequest) {
     // Optional offer percentage validation
     let offer = 0;
     if (offerRaw !== null && offerRaw !== undefined && offerRaw.toString().trim() !== '') {
-      const parsedOffer = parseFloat(offerRaw.toString().trim());
-      if (isNaN(parsedOffer) || parsedOffer < 0 || parsedOffer > 100) {
+      const offerValidation = validateOffer(offerRaw);
+      if (!offerValidation.isValid) {
         return NextResponse.json(
-          { error: 'Offer percentage must be a valid number between 0 and 100' },
+          { error: offerValidation.error || 'Offer percentage must be a valid number between 0 and 100' },
           { status: 400 }
         );
       }
-      offer = parsedOffer;
+      offer = offerValidation.value;
     }
 
     // Collect all uploaded image files

@@ -43,6 +43,9 @@ export interface OrderSubcategory {
   subcategoryName: string;
   subCategoryType: string;
   amount: number;
+  offer: number;
+  discountAmount: number;
+  finalAmount: number;
   images: string[];
   category: OrderCategory;
 }
@@ -53,6 +56,10 @@ export interface OrderItem {
   subcategoryId: number;
   subCategoryType?: string;
   quantity: number;
+  amount: number;
+  offer: number;
+  discountAmount: number;
+  finalAmount: number;
   itemTotal: number;
   subcategory: OrderSubcategory;
   createdAt: string | Date;
@@ -129,6 +136,10 @@ interface OrderItemRow {
   subcategoryId: number;
   subcategoryName: string;
   price: unknown;
+  amount?: unknown;
+  offer?: unknown;
+  discountAmount?: unknown;
+  finalAmount?: unknown;
   itemTotal?: unknown;
   categoryName: string;
   subCategoryType?: string;
@@ -165,6 +176,7 @@ interface SubcategoryRow {
   subcategory_name: string;
   sub_category_type?: string;
   amount: unknown;
+  offer?: unknown;
   category_id: number;
   status: string;
 }
@@ -393,6 +405,10 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
               subcategoryId,
               subcategoryName,
               price,
+              amount,
+              offer,
+              discountAmount,
+              finalAmount,
               itemTotal,
               categoryName,
               subCategoryType,
@@ -454,7 +470,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
   const subcategoryRows =
     subcategoryIds.length > 0
       ? await query<SubcategoryRow[]>(
-        `SELECT id, subcategory_name, sub_category_type, amount, category_id, status
+        `SELECT id, subcategory_name, sub_category_type, amount, offer, category_id, status
            FROM subcategories
            WHERE id IN (${inPlaceholders(subcategoryIds)})`,
         subcategoryIds
@@ -574,11 +590,32 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
 
     const rawItems = itemsByOrder[order.id] || [];
     const items: OrderItem[] = rawItems.map((item) => {
-      const historicalAmount = money(item.price);
       const quantity = toNumber(item.quantity);
+      const storedPrice = money(item.price);
+      const storedFinal = item.finalAmount != null && !isNaN(Number(item.finalAmount)) && Number(item.finalAmount) > 0
+        ? money(item.finalAmount)
+        : storedPrice;
+      const storedAmount = item.amount != null && !isNaN(Number(item.amount)) && Number(item.amount) > 0
+        ? money(item.amount)
+        : storedFinal;
+      const storedOffer = item.offer != null && !isNaN(Number(item.offer))
+        ? toNumber(item.offer)
+        : 0;
+      const unitDiscount = money((storedAmount * storedOffer) / 100);
+      const calculatedTotalDiscount = money(unitDiscount * quantity);
+      let storedDiscount =
+        item.discountAmount != null && !isNaN(Number(item.discountAmount)) && Number(item.discountAmount) > 0
+          ? money(item.discountAmount)
+          : calculatedTotalDiscount;
+
+      // In case an older order stored single-unit discount for multi-quantity, upgrade to total discount
+      if (quantity > 1 && storedDiscount === unitDiscount && calculatedTotalDiscount !== unitDiscount) {
+        storedDiscount = calculatedTotalDiscount;
+      }
+
       const itemTotal = item.itemTotal != null && !isNaN(Number(item.itemTotal))
         ? money(item.itemTotal)
-        : money(historicalAmount * quantity);
+        : money(storedFinal * quantity);
 
       const liveSub = subcategoryMap[item.subcategoryId];
       const useLiveSub = liveSub && liveSub.status === 'active';
@@ -591,23 +628,18 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         item.categoryName,
         categoryMap
       );
-      const subcategory: OrderSubcategory = useLiveSub
-        ? {
-          id: liveSub.id,
-          subcategoryName: liveSub.subcategory_name,
-          subCategoryType,
-          amount: money(liveSub.amount),
-          images: resolveSubcategoryImages(imagesMap[liveSub.id] || []),
-          category,
-        }
-        : {
-          id: item.subcategoryId,
-          subcategoryName: item.subcategoryName || liveSub?.subcategory_name || '',
-          subCategoryType,
-          amount: historicalAmount,
-          images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || []),
-          category,
-        };
+      // Historical stored pricing snapshot is preserved to ensure changing subcategory offers later does not alter old orders
+      const subcategory: OrderSubcategory = {
+        id: item.subcategoryId,
+        subcategoryName: item.subcategoryName || liveSub?.subcategory_name || '',
+        subCategoryType,
+        amount: storedAmount,
+        offer: storedOffer,
+        discountAmount: unitDiscount,
+        finalAmount: storedFinal,
+        images: resolveSubcategoryImages(imagesMap[item.subcategoryId] || (liveSub ? imagesMap[liveSub.id] : []) || []),
+        category,
+      };
 
       return {
         id: item.id,
@@ -615,6 +647,10 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         subcategoryId: item.subcategoryId,
         subCategoryType,
         quantity,
+        amount: storedAmount,
+        offer: storedOffer,
+        discountAmount: storedDiscount,
+        finalAmount: storedFinal,
         itemTotal,
         subcategory,
         createdAt: item.createdAt,

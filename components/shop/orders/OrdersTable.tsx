@@ -168,6 +168,9 @@ export default function OrdersTable({
                 const currentStatus = order.orderStatus?.status || 'ordered';
                 const user = order.user;
                 const itemsCount = order.items?.length || 0;
+                const orderDiscount =
+                  order.items?.reduce((acc, it) => acc + (Number(it.discountAmount) || 0), 0) || 0;
+                const originalTotal = Number((order.total + orderDiscount).toFixed(2));
 
                 return (
                   <tr key={order.id} className="hover:bg-[#F9FBF9] transition duration-150">
@@ -252,9 +255,25 @@ export default function OrdersTable({
                     {/* 4. Total Amount */}
                     <td className="py-4 px-6 align-top">
                       <div>
-                        <div className="font-quicksand font-bold text-base text-gray-900">
-                          ₹{order.total.toFixed(2)}
-                        </div>
+                        {orderDiscount > 0 ? (
+                          <>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="font-quicksand font-bold text-base text-gray-900">
+                                ₹{order.total.toFixed(2)}
+                              </span>
+                              <span className="text-xs text-gray-400 line-through font-quicksand font-semibold">
+                                ₹{originalTotal.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-emerald-600 font-bold font-quicksand">
+                              Discount: -₹{orderDiscount.toFixed(2)}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="font-quicksand font-bold text-base text-gray-900">
+                            ₹{order.total.toFixed(2)}
+                          </div>
+                        )}
                         <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 mt-0.5">
                           <CreditCard className="w-3 h-3 text-gray-400" />
                           <span>{order.paymentMethod?.paymentType || 'COD'}</span>
@@ -284,6 +303,9 @@ export default function OrdersTable({
           const currentStatus = order.orderStatus?.status || 'ordered';
           const user = order.user;
           const itemsCount = order.items?.length || 0;
+          const orderDiscount =
+            order.items?.reduce((acc, it) => acc + (Number(it.discountAmount) || 0), 0) || 0;
+          const originalTotal = Number((order.total + orderDiscount).toFixed(2));
 
           return (
             <div
@@ -400,8 +422,22 @@ export default function OrdersTable({
                   <Layers className="w-3.5 h-3.5 text-gray-400" />
                   <span className="font-semibold">Total Amount</span>
                 </div>
-                <div className="font-quicksand font-extrabold text-base sm:text-lg text-gray-900 leading-tight">
-                  ₹{order.total.toFixed(2)}
+                <div className="text-right">
+                  <div className="flex items-baseline justify-end gap-1.5">
+                    <span className="font-quicksand font-extrabold text-base sm:text-lg text-gray-900 leading-tight">
+                      ₹{order.total.toFixed(2)}
+                    </span>
+                    {orderDiscount > 0 && (
+                      <span className="text-xs text-gray-400 line-through font-quicksand font-semibold">
+                        ₹{originalTotal.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {orderDiscount > 0 && (
+                    <div className="text-[11px] text-emerald-600 font-bold font-quicksand">
+                      Discount: -₹{orderDiscount.toFixed(2)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -35,6 +35,8 @@ export interface SubCategoryData {
   amount: number;
   stock?: number | null;
   offer?: number;
+  discountAmount?: number;
+  finalAmount?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -292,9 +294,23 @@ export default function SubCategoryTable({
 
                     {/* Amount */}
                     <td className="py-4 px-4 sm:px-6">
-                      <span className="font-bold font-quicksand text-gray-900 text-sm">
-                        {formatAmount(subCat.amount)}
-                      </span>
+                      {subCat.offer && subCat.offer > 0 ? (
+                        <div className="flex flex-col">
+                          <span className="font-bold font-quicksand text-gray-900 text-sm">
+                            {formatAmount(subCat.finalAmount ?? (subCat.amount - (subCat.discountAmount ?? ((subCat.amount * subCat.offer) / 100))))}
+                          </span>
+                          <span className="text-xs text-gray-400 line-through font-quicksand font-semibold">
+                            {formatAmount(subCat.amount)}
+                          </span>
+                          <span className="text-[11px] font-bold text-emerald-600 font-quicksand">
+                            Discount: {formatAmount(subCat.discountAmount ?? ((subCat.amount * subCat.offer) / 100))}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-bold font-quicksand text-gray-900 text-sm">
+                          {formatAmount(subCat.amount)}
+                        </span>
+                      )}
                     </td>
 
                     {/* Offer */}
@@ -460,9 +476,25 @@ export default function SubCategoryTable({
                 <span className="font-bold text-gray-400 uppercase tracking-wider font-quicksand">
                   Amount
                 </span>
-                <span className="font-bold font-quicksand text-gray-900 text-sm">
-                  {formatAmount(subCat.amount)}
-                </span>
+                <div className="text-right">
+                  {subCat.offer && subCat.offer > 0 ? (
+                    <div className="flex flex-col items-end">
+                      <span className="font-bold font-quicksand text-gray-900 text-sm">
+                        {formatAmount(subCat.finalAmount ?? (subCat.amount - (subCat.discountAmount ?? ((subCat.amount * subCat.offer) / 100))))}
+                      </span>
+                      <span className="text-xs text-gray-400 line-through font-quicksand font-semibold">
+                        {formatAmount(subCat.amount)}
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-600 font-quicksand">
+                        Discount: {formatAmount(subCat.discountAmount ?? ((subCat.amount * subCat.offer) / 100))}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-bold font-quicksand text-gray-900 text-sm">
+                      {formatAmount(subCat.amount)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Field: Offer */}

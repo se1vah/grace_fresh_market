@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     // 2. Fetch subcategories & categories info for all requested items
     const uniqueSubIds = [...new Set(parsedItems.map((item) => item.subcategoryId))];
     const subCheckRows = await query<any[]>(
-      `SELECT s.id, s.subcategory_name, s.amount, s.stock, s.status, c.status as category_status 
+      `SELECT s.id, s.subcategory_name, s.amount, s.stock, s.offer, s.status, c.status as category_status 
        FROM subcategories s 
        JOIN categories c ON s.category_id = c.id 
        WHERE s.id IN (${uniqueSubIds.map(() => '?').join(',')})`,

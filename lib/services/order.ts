@@ -3,6 +3,7 @@ import { getPool, initShopDb, query } from '@/lib/db';
 import { emitSocketEvent } from '@/lib/socket';
 import { sendShopPushNotification } from '@/lib/notifications/shopPush';
 import { userPushNotification } from '@/lib/notifications/userPushNotification';
+import { calculateItemTotal } from '@/lib/pricing';
 export {
   getActiveOrderForSubcategory,
   getActiveOrderForCategory,
@@ -33,7 +34,10 @@ export interface OrderItemResponse {
   subcategoryName: string;
   subcategoryImage: string[];
   quantity: number;
-  price: number;
+  amount: number;
+  offer: number;
+  discountAmount: number;
+  finalAmount: number;
   itemTotal: number;
   categoryId: number;
   categoryName: string;
@@ -44,6 +48,9 @@ export interface OrderItemResponse {
     subcategoryName: string;
     subCategoryType: string;
     amount: number;
+    offer: number;
+    discountAmount: number;
+    finalAmount: number;
     image: string[];
     stock: number | null;
   };
@@ -130,6 +137,7 @@ interface SubcategoryWithCategoryRow extends mysql.RowDataPacket {
   sub_category_type: string;
   amount: number | string;
   stock: number | string | null;
+  offer: number | string | null;
   subcategory_status: string;
   category_id: number | null;
   category_name: string | null;
@@ -237,6 +245,11 @@ export async function createOrderFromCart(
     {
       subcategoryId: number;
       subcategoryName: string;
+      amount: number;
+      offer: number;
+      unitDiscountAmount: number;
+      discountAmount: number;
+      finalAmount: number;
       price: number;
       itemTotal: number;
       currentStock: number | null;
@@ -264,6 +277,7 @@ export async function createOrderFromCart(
           s.sub_category_type,
           s.amount,
           s.stock,
+          s.offer,
           s.status AS subcategory_status,
           c.id AS category_id,
           c.category_name,
@@ -309,15 +323,20 @@ export async function createOrderFromCart(
         );
       }
 
-      const unitPrice = Number(dbRow.amount) || 0;
-      const itemTotal = Number((unitPrice * item.quantity).toFixed(2));
+      // Calculate unit discount and final payable price using the offer
+      const itemCalc = calculateItemTotal(dbRow.amount, dbRow.offer, item.quantity);
       const newStock = hasStockLimit && currentStock !== null ? currentStock - item.quantity : null;
 
       calculatedItemsMap.set(item.subcategoryId, {
         subcategoryId: item.subcategoryId,
         subcategoryName,
-        price: unitPrice,
-        itemTotal,
+        amount: itemCalc.amount,
+        offer: itemCalc.offer,
+        unitDiscountAmount: itemCalc.unitDiscountAmount,
+        discountAmount: itemCalc.discountAmount,
+        finalAmount: itemCalc.finalAmount,
+        price: itemCalc.finalAmount, // Store actual final selling price used for order in price column
+        itemTotal: itemCalc.itemTotal,
         currentStock,
         newStock,
         categoryId: dbRow.category_id ? Number(dbRow.category_id) : 0,
@@ -524,17 +543,25 @@ export async function createOrderFromCart(
            categoryId,
            subcategoryName,
            price,
+           amount,
+           offer,
+           discountAmount,
+           finalAmount,
            categoryName,
            subCategoryType,
            quantity,
            itemTotal
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderId,
           item.subcategoryId,
           calc.categoryId,
           calc.subcategoryName,
-          calc.price,
+          calc.finalAmount, // price = actual final selling price
+          calc.amount,      // original amount
+          calc.offer,       // offer %
+          calc.discountAmount, // discount amount
+          calc.finalAmount, // final amount
           calc.categoryName,
           calc.subCategoryType,
           item.quantity,
@@ -659,17 +686,23 @@ export async function createOrderFromCart(
       subcategoryName: calc.subcategoryName,
       subcategoryImage: images,
       quantity: item.quantity,
-      price: calc.price,
+      amount: calc.amount,
+      offer: calc.offer,
+      discountAmount: calc.discountAmount,
+      finalAmount: calc.finalAmount,
       itemTotal: calc.itemTotal,
       categoryId: calc.categoryId,
       categoryName: calc.categoryName,
       subCategoryType: calc.subCategoryType,
-      total: calc.price * calc.itemTotal,
+      total: calc.itemTotal,
       subcategory: {
         id: item.subcategoryId,
         subcategoryName: calc.subcategoryName,
         subCategoryType: calc.subCategoryType,
-        amount: calc.price,
+        amount: calc.amount,
+        offer: calc.offer,
+        discountAmount: calc.unitDiscountAmount,
+        finalAmount: calc.finalAmount,
         image: images,
         stock: calc.newStock,
       },

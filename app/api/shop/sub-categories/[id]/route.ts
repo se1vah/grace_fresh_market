@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { getActiveOrderForSubcategory } from '@/lib/services/order-status-check';
 import { uploadFile, deleteFile } from '@/lib/blob';
+import { calculatePricing, validateOffer } from '@/lib/pricing';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -19,6 +20,7 @@ function sanitizeSlug(text: string): string {
 
 function formatSubCategoryRow(row: any, imagesList: string[] = []) {
   const subCategoryType = row.sub_category_type || row.subCategoryType || 'gram';
+  const pricing = calculatePricing(row.amount, row.offer);
   return {
     id: row.id,
     subcategoryName: row.subcategory_name,
@@ -27,9 +29,11 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
     sub_category_type: subCategoryType,
     images: imagesList,
     status: row.status,
-    amount: Number(row.amount),
+    amount: pricing.amount,
+    offer: pricing.offer,
+    discountAmount: pricing.discountAmount,
+    finalAmount: pricing.finalAmount,
     stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
-    offer: Number(row.offer || 0),
     categoryId: row.category_id,
     category_id: row.category_id,
     category: {
@@ -213,19 +217,14 @@ export async function PUT(
     // Validate Offer percentage
     let offer = existingSubCategory.offer !== null && existingSubCategory.offer !== undefined ? Number(existingSubCategory.offer) : 0;
     if (offerRaw !== null && offerRaw !== undefined) {
-      const trimmedOffer = offerRaw.trim();
-      if (trimmedOffer === '') {
-        offer = 0;
-      } else {
-        const parsedOffer = parseFloat(trimmedOffer);
-        if (isNaN(parsedOffer) || parsedOffer < 0 || parsedOffer > 100) {
-          return NextResponse.json(
-            { error: 'Offer percentage must be a valid number between 0 and 100' },
-            { status: 400 }
-          );
-        }
-        offer = parsedOffer;
+      const offerValidation = validateOffer(offerRaw);
+      if (!offerValidation.isValid) {
+        return NextResponse.json(
+          { error: offerValidation.error || 'Offer percentage must be a valid number between 0 and 100' },
+          { status: 400 }
+        );
       }
+      offer = offerValidation.value;
     }
 
     // Fetch existing images from subcategory_images table

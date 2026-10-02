@@ -451,6 +451,10 @@ export async function initShopDb(): Promise<void> {
           subcategoryId INT NOT NULL,
           subcategoryName VARCHAR(255) NOT NULL DEFAULT '',
           price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+          discountAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          finalAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           categoryName VARCHAR(255) NOT NULL DEFAULT '',
           subCategoryType VARCHAR(50) NOT NULL DEFAULT 'gram',
@@ -548,10 +552,40 @@ export async function initShopDb(): Promise<void> {
       // Column may not exist or already dropped
     }
 
+    // Ensure OrderItems supports pricing history snapshot (amount, offer, discountAmount, finalAmount)
     try {
-      await activePool.query('ALTER TABLE OrderItems DROP COLUMN amount;');
+      await activePool.query('ALTER TABLE OrderItems ADD COLUMN amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
     } catch {
-      // Column may not exist or already dropped
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query('ALTER TABLE OrderItems ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;');
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query('ALTER TABLE OrderItems ADD COLUMN discountAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query('ALTER TABLE OrderItems ADD COLUMN finalAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
+    } catch {
+      // Column may already exist
+    }
+
+    try {
+      await activePool.query(`
+        UPDATE OrderItems
+        SET finalAmount = price,
+            amount = CASE WHEN amount = 0.00 THEN price ELSE amount END
+        WHERE (finalAmount = 0.00 OR amount = 0.00) AND price > 0;
+      `);
+    } catch {
+      // Ignore if update fails or already updated
     }
 
     try {

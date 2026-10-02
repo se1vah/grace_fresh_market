@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
+import { calculateItemTotal } from '@/lib/pricing';
 
 async function fetchDeliveryFee(): Promise<number | null> {
   const settingsRows = await query<{ delivery_fee: unknown }[]>(
@@ -34,6 +35,7 @@ export async function fetchUserCart(userId: number) {
         s.status as subcategory_status,
         s.amount,
         s.stock,
+        s.offer,
         s.category_id,
         cat.category_name,
         cat.status as category_status
@@ -52,7 +54,9 @@ export async function fetchUserCart(userId: number) {
         totalItems: 0,
         itemCount: 0,
         totalAmount: 0,
+        subTotal: 0,
         deliveryFee,
+        total: deliveryFee || 0,
       },
     };
   }
@@ -82,12 +86,11 @@ export async function fetchUserCart(userId: number) {
   let totalAmount = 0;
 
   const formattedItems = cartRows.map((row) => {
-    const unitPrice = Number(row.amount) || 0;
     const qty = Number(row.quantity) || 0;
-    const itemTotal = unitPrice * qty;
+    const itemCalc = calculateItemTotal(row.amount, row.offer, qty);
 
     totalItems += qty;
-    totalAmount += itemTotal;
+    totalAmount += itemCalc.itemTotal;
 
     const itemImages = imagesMap[row.subcategory_id] || [];
 
@@ -97,12 +100,19 @@ export async function fetchUserCart(userId: number) {
       userId: row.user_id,
       subcategoryId: row.subcategory_id,
       quantity: qty,
-      itemTotal: Number(itemTotal.toFixed(2)),
+      amount: itemCalc.amount,
+      offer: itemCalc.offer,
+      discountAmount: itemCalc.discountAmount,
+      finalAmount: itemCalc.finalAmount,
+      itemTotal: itemCalc.itemTotal,
       subcategory: {
         id: row.subcategory_id,
         subcategoryName: row.subcategory_name,
         subCategoryType: row.sub_category_type || 'gram',
-        amount: unitPrice,
+        amount: itemCalc.amount,
+        offer: itemCalc.offer,
+        discountAmount: itemCalc.unitDiscountAmount,
+        finalAmount: itemCalc.finalAmount,
         stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
         status: row.subcategory_status,
         images: itemImages,
@@ -127,7 +137,9 @@ export async function fetchUserCart(userId: number) {
       totalItems,
       itemCount: formattedItems.length,
       totalAmount: formattedTotalAmount,
+      subTotal: formattedTotalAmount,
       deliveryFee: effectiveDeliveryFee,
+      total: Number((formattedTotalAmount + (effectiveDeliveryFee || 0)).toFixed(2)),
     },
   };
 }
