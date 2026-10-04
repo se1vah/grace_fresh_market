@@ -297,10 +297,144 @@ When a logged-in user tries to delete another user's account:
 }
 ```
 
+## 6. POST `/api/users/forgotPassword` (or `/api/users/forgot-password`, `/api/user/forgotPassword`, `/api/user/forgot-password`)
+
+Generates a secure random 4-digit confirmation code, stores it in the `users.confirmationCode` column, and sends a professional email with the verification code to the user.
+
+### Request Details
+- **HTTP Method**: `POST`
+- **URL Paths**: `/api/users/forgotPassword`, `/api/users/forgot-password`, `/api/user/forgotPassword`, `/api/user/forgot-password`
+- **Headers**: `Content-Type: application/json`
+- **Authentication**: Public (Unauthenticated)
+
+### Request Body Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `email` | `string` | Yes | Registered user email address. |
+
+### Example Request Body
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Example Successful Response (`200 OK`)
+
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Confirmation code sent to your email successfully."
+}
+```
+
+### Example Error Responses
+
+- **Missing / Invalid Email (`400 Bad Request`)**:
+```json
+{
+  "status": false,
+  "success": false,
+  "error": "Email is required.",
+  "message": "Email is required."
+}
+```
+
+- **User Not Found (`404 Not Found`)**:
+```json
+{
+  "status": false,
+  "success": false,
+  "error": "User with this email does not exist.",
+  "message": "User with this email does not exist."
+}
+```
+
+---
+
+## 7. POST `/api/users/confirmForgotPassword` (or `/api/users/confirm-forgot-password`, `/api/user/confirmForgotPassword`, `/api/user/confirm-forgot-password`)
+
+Verifies the 4-digit confirmation code and optionally resets the user password.
+
+### Request Details
+- **HTTP Method**: `POST`
+- **URL Paths**: `/api/users/confirmForgotPassword`, `/api/users/confirm-forgot-password`, `/api/user/confirmForgotPassword`, `/api/user/confirm-forgot-password`
+- **Headers**: `Content-Type: application/json`
+- **Authentication**: Public (Unauthenticated)
+
+### Behavior & Modes
+
+#### Mode 1 — Confirmation Code Validation Only
+Use this mode to check if the 4-digit code entered by the user is valid before asking them to enter a new password.
+
+**Request Body:**
+```json
+{
+  "confirmationCode": "1234"
+}
+```
+
+*(Optional `email` parameter can also be supplied).*
+
+**Success Response (`200 OK`):**
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Confirmation code verified successfully"
+}
+```
+
+**Invalid/Expired Code Response (`400 Bad Request`):**
+```json
+{
+  "status": false,
+  "success": false,
+  "error": "Invalid or expired confirmation code.",
+  "message": "Invalid or expired confirmation code."
+}
+```
+
+#### Mode 2 — Confirm Code + Reset Password
+Use this mode to verify the confirmation code, validate and hash the new password, update the database, and set `confirmationCode = NULL` to prevent reuse.
+
+**Request Body:**
+```json
+{
+  "confirmationCode": "1234",
+  "newPassword": "NewPassword@123",
+  "confirmPassword": "NewPassword@123"
+}
+```
+
+**Success Response (`200 OK`):**
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+**Password Mismatch Response (`400 Bad Request`):**
+```json
+{
+  "status": false,
+  "success": false,
+  "error": "newPassword and confirmPassword must match.",
+  "message": "newPassword and confirmPassword must match."
+}
+```
+
 ---
 
 ## Database Impact
 
-- **`users` table**: Stores `id`, `fullName`, `email`, `phoneNumber`, hashed `password`, `created_at`, `updated_at`.
-- **`userLogin` table**: Stores `id`, `user_id` (foreign key to `users.id`), `token` (JWT string), `fcmToken` (Firebase Cloud Messaging push notification device token), and `created_at`. Every successful registration or login inserts a new active session record into `userLogin` along with the provided `fcmToken`. On logout, the token session is deleted from `userLogin`.
+- **`users` table**: Stores `id`, `fullName`, `email`, `phoneNumber`, hashed `password`, `confirmationCode` (`VARCHAR(10) NULL DEFAULT NULL`), `created_at`, `updated_at`.
+- **`confirmationCode` column**: Holds the active 4-digit numeric code when requested via `forgotPassword`. Once the password is reset successfully via `confirmForgotPassword`, `confirmationCode` is reset to `NULL` to prevent reuse.
+- **`userLogin` table**: Stores `id`, `user_id` (foreign key to `users.id`), `token` (JWT string), `fcmToken` (Firebase Cloud Messaging push notification device token), and `created_at`.
 - **Hard Deletion**: Deleting via `/api/user/delete/:userId` permanently purges the user from `users`, `userLogin`, `cart`, `user_addresses`, `Order`, `OrderItems`, `OrderStatus`, `Notification`, and removes any uploaded profile images from blob storage.
+

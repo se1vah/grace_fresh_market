@@ -240,6 +240,7 @@ export async function initShopDb(): Promise<void> {
           phoneNumber VARCHAR(50) NOT NULL DEFAULT '',
           profileImage VARCHAR(500) NULL DEFAULT '',
           password VARCHAR(255) NOT NULL,
+          confirmationCode VARCHAR(10) NULL DEFAULT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           INDEX idx_user_email (email)
@@ -259,6 +260,17 @@ export async function initShopDb(): Promise<void> {
       await activePool.query(`ALTER TABLE users ADD COLUMN profileImage VARCHAR(500) NULL DEFAULT '';`);
     } catch (err) {
       // Column may already exist, ignore error
+    }
+
+    // Migration for existing tables to add or modify confirmationCode to VARCHAR(10) NULL
+    try {
+      await activePool.query(`ALTER TABLE users ADD COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
+    } catch (err) {
+      try {
+        await activePool.query(`ALTER TABLE users MODIFY COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
+      } catch (modifyErr) {
+        // Column may already exist and nullable
+      }
     }
 
     // Ensure UserLogin table exists
