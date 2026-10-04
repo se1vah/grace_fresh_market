@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
+import { signUserToken, USER_COOKIE_NAME, getUserCookieOptions } from '@/lib/auth/user-jwt';
+import { ResultSetHeader } from 'mysql2';
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +15,8 @@ export async function POST(request: Request) {
         : body.otp;
 
     const { newPassword, confirmPassword, email } = body;
+    const rawFcmToken = body.fcmToken || body.fcm_token;
+    const fcmToken = typeof rawFcmToken === 'string' && rawFcmToken.trim() ? rawFcmToken.trim() : null;
 
     // 1. Validate confirmation code exists
     if (rawCode === undefined || rawCode === null || String(rawCode).trim() === '') {
@@ -108,14 +112,22 @@ export async function POST(request: Request) {
     // 3. User lookup by confirmationCode (and optional email)
     const queryParams: any[] = [confirmationCode];
     let sql =
-      'SELECT id, fullName, email, confirmationCode FROM users WHERE confirmationCode = ? AND confirmationCode IS NOT NULL';
+      'SELECT id, fullName, email, phoneNumber, confirmationCode FROM users WHERE confirmationCode = ? AND confirmationCode IS NOT NULL';
 
     if (email && typeof email === 'string' && email.trim()) {
       sql += ' AND LOWER(email) = ?';
       queryParams.push(email.trim().toLowerCase());
     }
 
-    const users = await query<any[]>(sql, queryParams);
+    const users = await query<any[]>(sql, queryParams).catch(async () => {
+      // Fallback in case table still has column named phone instead of phoneNumber
+      let fallbackSql =
+        'SELECT id, fullName, email, phone AS phoneNumber, confirmationCode FROM users WHERE confirmationCode = ? AND confirmationCode IS NOT NULL';
+      if (email && typeof email === 'string' && email.trim()) {
+        fallbackSql += ' AND LOWER(email) = ?';
+      }
+      return await query<any[]>(fallbackSql, queryParams);
+    });
 
     if (!users || users.length === 0) {
       return NextResponse.json(
@@ -153,14 +165,39 @@ export async function POST(request: Request) {
       [hashedPassword, user.id]
     );
 
-    return NextResponse.json(
-      {
-        status: true,
-        success: true,
-        message: 'Password reset successfully',
-      },
-      { status: 200 }
+    // 4. Generate JWT token
+    const userPhone = user.phoneNumber || user.phone || '';
+    const token = await signUserToken({
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: userPhone,
+    });
+
+    // 5. Store JWT token and fcmToken in `userLogin` table
+    await query<ResultSetHeader>(
+      'INSERT INTO userLogin (user_id, token, fcmToken) VALUES (?, ?, ?)',
+      [user.id, token, fcmToken]
     );
+
+    // 6. Return response with token and cookie
+    const response = NextResponse.json({
+      status: true,
+      success: true,
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: userPhone,
+      },
+      token,
+    });
+
+    const cookieOptions = getUserCookieOptions();
+    response.cookies.set(USER_COOKIE_NAME, token, cookieOptions);
+
+    return response;
   } catch (error) {
     console.error('Error in confirmForgotPassword API:', error);
     return NextResponse.json(

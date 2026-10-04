@@ -399,14 +399,15 @@ Use this mode to check if the 4-digit code entered by the user is valid before a
 ```
 
 #### Mode 2 — Confirm Code + Reset Password
-Use this mode to verify the confirmation code, validate and hash the new password, update the database, and set `confirmationCode = NULL` to prevent reuse.
+Use this mode to verify the confirmation code, validate and hash the new password, update the database, set `confirmationCode = NULL` to prevent reuse, generate a fresh JWT authentication token, register session in `userLogin` table (with optional FCM push token), and return the authentication cookie and payload.
 
 **Request Body:**
 ```json
 {
   "confirmationCode": "1234",
   "newPassword": "NewPassword@123",
-  "confirmPassword": "NewPassword@123"
+  "confirmPassword": "NewPassword@123",
+  "fcmToken": "dwhUL5LQ0uuWwqcDOX2R2c:APA91bG2s-s3jWQomdeqiys5W0ZuaOALtMKZL1SOv..."
 }
 ```
 
@@ -415,9 +416,17 @@ Use this mode to verify the confirmation code, validate and hash the new passwor
 {
   "status": true,
   "success": true,
-  "message": "Password reset successfully"
+  "message": "Login successful",
+  "user": {
+    "id": 1,
+    "fullName": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "phoneNumber": "+1234567890"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
+*Note: Also sets HTTP-only `user_token` cookie.*
 
 **Password Mismatch Response (`400 Bad Request`):**
 ```json
