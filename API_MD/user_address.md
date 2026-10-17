@@ -15,6 +15,7 @@ This document details the **User Address API endpoints** (`GET`, `POST`, `PUT`, 
 | `city` | `string` | Yes | City or Town name. |
 | `state` | `string` | No | State name (e.g., "Karnataka", "California", "NY"). |
 | `pincode` / `zipcode` | `string` | Yes | Postal Pincode / Zip Code. |
+| `phoneNumber` / `phone_number` | `string` | No | Contact Phone Number. If omitted/null, falls back to `users.phoneNumber`. |
 | `addressType` / `address_type` | `string` | Yes | Address Type: `"Home"`, `"Work"`, or `"Other"`. Returns lowercased `"home"`, `"work"`, or `"other"`. |
 | `isDefault` / `is_default` | `boolean` | No | Flag indicating default primary address (`true` or `false`). Default: `false`. |
 | `createdAt` | `string` | Auto | ISO timestamp when record was created. |
@@ -44,6 +45,7 @@ Adds a new address for the specified user.
 | `city` | `string` | Yes | City or Town. |
 | `state` | `string` | No | State name. |
 | `pincode` / `zipcode` | `string` | Yes | Pincode / Zip Code. |
+| `phoneNumber` / `phone_number` | `string` | No | Contact phone number. If null/empty, automatically falls back to `users.phoneNumber`. |
 | `addressType` / `address_type` | `string` | Yes | Address Type: `"Home"`, `"Work"`, or `"Other"`. |
 | `isDefault` / `is_default` | `boolean` | No | Set as default address (`true` or `false`). |
 
@@ -57,6 +59,7 @@ Adds a new address for the specified user.
   "city": "Bengaluru",
   "state": "Karnataka",
   "pincode": "560038",
+  "phoneNumber": "+91 9876543210",
   "addressType": "Home",
   "isDefault": true
 }

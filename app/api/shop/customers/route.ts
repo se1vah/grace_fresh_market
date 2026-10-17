@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Fetch Addresses for these users
     const addressRows = await query<any[]>(
-      `SELECT id, user_id, building_name, street_name, city, state, pincode, address_type, is_default, created_at 
+      `SELECT id, user_id, building_name, street_name, city, state, pincode, phone_number, address_type, is_default, created_at 
        FROM user_addresses 
        WHERE user_id IN (${placeholders}) 
        ORDER BY is_default DESC, id DESC`,
@@ -127,6 +127,7 @@ export async function GET(request: NextRequest) {
         city: row.city || '',
         state: row.state || '',
         pincode: row.pincode || '',
+        phoneNumber: row.phone_number || '',
         addressType: (row.address_type || 'Home').toString(),
         isDefault: Boolean(row.is_default),
       });

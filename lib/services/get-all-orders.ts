@@ -27,6 +27,8 @@ export interface OrderAddress {
   state: string;
   pincode: string;
   address_type: string;
+  phone_number?: string;
+  phoneNumber?: string;
   buildingName?: string;
   streetName?: string;
   addressType?: string;
@@ -116,6 +118,7 @@ interface OrderRow {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  phone_number?: string | null;
   address_type: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -163,6 +166,7 @@ interface AddressRow {
   state: string | null;
   pincode: string | null;
   address_type: string | null;
+  phone_number?: string | null;
 }
 
 interface CategoryRow {
@@ -238,6 +242,7 @@ function formatLiveAddress(row: AddressRow): OrderAddress {
   const state = row.state || '';
   const pincode = row.pincode || '';
   const address_type = row.address_type || '';
+  const phone_number = row.phone_number || '';
 
   return {
     id: row.id,
@@ -247,6 +252,7 @@ function formatLiveAddress(row: AddressRow): OrderAddress {
     state,
     pincode,
     address_type,
+    phoneNumber: phone_number,
     buildingName: building_name,
     streetName: street_name,
     addressType: address_type,
@@ -260,6 +266,7 @@ function formatSnapshotAddress(order: OrderRow): OrderAddress | null {
     order.city,
     order.state,
     order.pincode,
+    order.phone_number,
     order.address_type,
   ];
 
@@ -273,6 +280,7 @@ function formatSnapshotAddress(order: OrderRow): OrderAddress | null {
   const city = order.city || '';
   const state = order.state || '';
   const pincode = order.pincode || '';
+  const phone_number = order.phone_number || '';
   const address_type = order.address_type || '';
 
   return {
@@ -283,6 +291,7 @@ function formatSnapshotAddress(order: OrderRow): OrderAddress | null {
     state,
     pincode,
     address_type,
+    phoneNumber: phone_number,
     buildingName: building_name,
     streetName: street_name,
     addressType: address_type,
@@ -348,6 +357,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
         city,
         state,
         pincode,
+        phone_number,
         address_type,
         createdAt,
         updatedAt
@@ -435,7 +445,7 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
   const addressRows =
     addressIds.length > 0
       ? await query<AddressRow[]>(
-        `SELECT id, building_name, street_name, city, state, pincode, address_type
+        `SELECT id, building_name, street_name, city, state, pincode, address_type, phone_number
            FROM user_addresses
            WHERE id IN (${inPlaceholders(addressIds)})`,
         addressIds
@@ -586,6 +596,13 @@ export async function getAllOrders(options?: GetAllOrdersOptions): Promise<UserO
       address = formatLiveAddress(addressMap[order.addressid]);
     } else {
       address = formatSnapshotAddress(order);
+    }
+
+    if (address && !address.phoneNumber && !address.phone_number) {
+      const userPhone = userMap[order.userId]?.phoneNumber || '';
+      if (userPhone) {
+        address.phoneNumber = userPhone;
+      }
     }
 
     const rawItems = itemsByOrder[order.id] || [];

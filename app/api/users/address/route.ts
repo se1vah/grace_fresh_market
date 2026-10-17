@@ -9,6 +9,7 @@ const ALLOWED_ADDRESS_TYPES = ['Home', 'Work', 'Other'];
 // Helper to format database row object for API response
 function formatAddressRow(row: any) {
   const rawType = (row.address_type || 'Home').toString();
+  const phone = row.phone_number || row.phoneNumber || '';
   return {
     id: row.id,
     userId: row.user_id,
@@ -18,6 +19,7 @@ function formatAddressRow(row: any) {
     city: row.city || '',
     state: row.state || '',
     pincode: row.pincode || '',
+    phoneNumber: phone,
     isDefault: Boolean(row.is_default),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -115,8 +117,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check user exists
-    const userCheck = await query<any[]>('SELECT id FROM users WHERE id = ?', [userId]);
+    // Check user exists and get user phone number
+    const userCheck = await query<any[]>('SELECT id, phoneNumber FROM users WHERE id = ?', [userId]);
     if (!userCheck || userCheck.length === 0) {
       return NextResponse.json(
         { error: 'User record not found.' },
@@ -132,6 +134,13 @@ export async function POST(request: NextRequest) {
     const zipcode = (body.zipcode || body.pincode || body.zip_code || '').toString().trim();
     const rawAddressType = (body.addressType || body.address_type || 'home').toString().trim();
     let isDefaultInput = body.isDefault !== undefined ? Boolean(body.isDefault) : (body.is_default !== undefined ? Boolean(body.is_default) : false);
+
+    // Resolve phoneNumber: if null/empty/not provided, take users table phoneNumber
+    const rawPhone = body.phoneNumber ?? body.phone_number ?? body.phone ?? body.mobile;
+    let phoneNumber = rawPhone !== undefined && rawPhone !== null ? String(rawPhone).trim() : '';
+    if (!phoneNumber) {
+      phoneNumber = (userCheck[0]?.phoneNumber || '').trim();
+    }
 
     // Validation
     if (!buildingName) {
@@ -195,9 +204,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query<ResultSetHeader>(
-      `INSERT INTO user_addresses (user_id, building_name, street_name, city, state, pincode, address_type, is_default)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0]
+      `INSERT INTO user_addresses (user_id, building_name, street_name, city, state, pincode, address_type, is_default, phone_number)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0, phoneNumber]
     );
 
     const newAddressId = result.insertId;
@@ -297,6 +306,17 @@ export async function PUT(request: NextRequest) {
       ? (body.zipcode || body.pincode || body.zip_code || '').toString().trim()
       : existing.pincode;
 
+    let phoneNumber = existing.phone_number || '';
+    if (
+      body.phoneNumber !== undefined ||
+      body.phone_number !== undefined ||
+      body.phone !== undefined ||
+      body.mobile !== undefined
+    ) {
+      const rawPhone = body.phoneNumber ?? body.phone_number ?? body.phone ?? body.mobile;
+      phoneNumber = rawPhone !== undefined && rawPhone !== null ? String(rawPhone).trim() : '';
+    }
+
     let matchedType = existing.address_type;
     if (body.addressType !== undefined || body.address_type !== undefined) {
       const rawType = (body.addressType || body.address_type || '').toString().trim();
@@ -357,9 +377,9 @@ export async function PUT(request: NextRequest) {
 
     await query(
       `UPDATE user_addresses 
-       SET building_name = ?, street_name = ?, city = ?, state = ?, pincode = ?, address_type = ?, is_default = ?, updated_at = CURRENT_TIMESTAMP
+       SET building_name = ?, street_name = ?, city = ?, state = ?, pincode = ?, address_type = ?, is_default = ?, phone_number = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
-      [buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0, addressId, userId]
+      [buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0, phoneNumber, addressId, userId]
     );
 
     const updatedRows = await query<any[]>(

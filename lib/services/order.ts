@@ -211,7 +211,7 @@ export function formatOrderAddress(row: mysql.RowDataPacket): OrderAddressDetail
     id: Number(row.id) || 0,
     userId: Number(row.user_id || row.userId || 0),
     fullName: (row.fullName || row.full_name || '').toString(),
-    phoneNumber: (row.phoneNumber || row.phone_number || '').toString(),
+    phoneNumber: (row.phone_number || row.phoneNumber || '').toString(),
     buildingName: bName,
     streetName: sName,
     addressLine1: bName,
@@ -371,7 +371,7 @@ export async function createOrderFromCart(
 
     // 1. Fetch user's default address
     const [defaultAddrRows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT ua.*, u.fullName, u.phoneNumber
+      `SELECT ua.*, u.fullName, COALESCE(NULLIF(ua.phone_number, ''), u.phoneNumber) AS phoneNumber
        FROM user_addresses ua
        LEFT JOIN users u ON u.id = ua.user_id
        WHERE ua.user_id = ? AND ua.is_default = 1
@@ -385,7 +385,7 @@ export async function createOrderFromCart(
     // 2. Fetch delivery address for order
     if (addressid) {
       const [addrRows] = await connection.query<mysql.RowDataPacket[]>(
-        `SELECT ua.*, u.fullName, u.phoneNumber
+        `SELECT ua.*, u.fullName, COALESCE(NULLIF(ua.phone_number, ''), u.phoneNumber) AS phoneNumber
          FROM user_addresses ua
          LEFT JOIN users u ON u.id = ua.user_id
          WHERE ua.id = ? AND ua.user_id = ?
@@ -408,7 +408,7 @@ export async function createOrderFromCart(
       } else {
         // Fallback to any saved address for the user
         const [anyAddrRows] = await connection.query<mysql.RowDataPacket[]>(
-          `SELECT ua.*, u.fullName, u.phoneNumber
+          `SELECT ua.*, u.fullName, COALESCE(NULLIF(ua.phone_number, ''), u.phoneNumber) AS phoneNumber
            FROM user_addresses ua
            LEFT JOIN users u ON u.id = ua.user_id
            WHERE ua.user_id = ?
@@ -441,6 +441,7 @@ export async function createOrderFromCart(
     const state = selectedAddressRow.state || '';
     const pincode = selectedAddressRow.pincode || selectedAddressRow.postalCode || selectedAddressRow.zipcode || '';
     const addressType = selectedAddressRow.address_type || selectedAddressRow.addressType || 'Home';
+    const phoneNumber = (selectedAddressRow.phone_number || selectedAddressRow.phoneNumber || '').toString();
 
     // 3. Resolve payment method
     let selectedPaymentMethod: PaymentMethodDetails | null = null;
@@ -493,8 +494,9 @@ export async function createOrderFromCart(
          city,
          state,
          pincode,
+         phone_number,
          address_type
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         subTotal,
@@ -508,6 +510,7 @@ export async function createOrderFromCart(
         city,
         state,
         pincode,
+        phoneNumber,
         addressType,
       ]
     );

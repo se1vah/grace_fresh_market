@@ -337,6 +337,7 @@ export async function initShopDb(): Promise<void> {
           city VARCHAR(100) NOT NULL,
           state VARCHAR(100) NULL DEFAULT '',
           pincode VARCHAR(20) NOT NULL,
+          phone_number VARCHAR(50) NULL DEFAULT '',
           address_type ENUM('Home', 'Work', 'Other') NOT NULL DEFAULT 'Home',
           is_default TINYINT(1) NOT NULL DEFAULT 0,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -354,6 +355,12 @@ export async function initShopDb(): Promise<void> {
     // Migration for existing user_addresses table
     try {
       await activePool.query(`ALTER TABLE user_addresses ADD COLUMN state VARCHAR(100) NULL DEFAULT '';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`ALTER TABLE user_addresses ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
     } catch (err) {
       // Column may already exist, ignore error
     }
@@ -442,6 +449,7 @@ export async function initShopDb(): Promise<void> {
           city VARCHAR(100) NULL DEFAULT '',
           state VARCHAR(100) NULL DEFAULT '',
           pincode VARCHAR(20) NULL DEFAULT '',
+          phone_number VARCHAR(50) NULL DEFAULT '',
           address_type VARCHAR(50) NULL DEFAULT '',
           createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -454,6 +462,12 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createOrderTableQuery);
+
+    try {
+      await activePool.query(`ALTER TABLE \`Order\` ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
 
     const createOrderItemsTableQuery = `
       CREATE TABLE IF NOT EXISTS OrderItems (

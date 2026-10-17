@@ -44,7 +44,7 @@ export async function getCheckoutDetails(userId: number): Promise<CheckoutDetail
     `SELECT
         ua.id,
         u.fullName AS full_name,
-        u.phoneNumber AS phone_number,
+        COALESCE(NULLIF(ua.phone_number, ''), u.phoneNumber) AS phone_number,
         ua.building_name,
         ua.street_name,
         ua.city,

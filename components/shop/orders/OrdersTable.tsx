@@ -62,7 +62,12 @@ export default function OrdersTable({
         const orderIdStr = String(order.id);
         const customerName = (order.user?.fullName || '').toLowerCase();
         const customerEmail = (order.user?.email || '').toLowerCase();
-        const customerPhone = (order.user?.phoneNumber || '').toLowerCase();
+        const customerPhone = (
+          order.address?.phoneNumber ||
+          order.address?.phone_number ||
+          order.user?.phoneNumber ||
+          ''
+        ).toLowerCase();
         const city = (order.address?.city || '').toLowerCase();
 
         return (
@@ -220,9 +225,9 @@ export default function OrdersTable({
                           <div className="text-[11px] text-gray-500 truncate max-w-[160px]">
                             {user?.email || `User #${order.userId}`}
                           </div>
-                          {user?.phoneNumber && (
+                          {(user?.phoneNumber || order.address?.phoneNumber || order.address?.phone_number) && (
                             <div className="text-[11px] text-gray-400">
-                              {user.phoneNumber}
+                              {order.address?.phoneNumber || order.address?.phone_number || user?.phoneNumber}
                             </div>
                           )}
                         </div>
@@ -375,9 +380,9 @@ export default function OrdersTable({
                         <div className="text-[11px] text-gray-500 truncate">
                           {user?.email || `User #${order.userId}`}
                         </div>
-                        {user?.phoneNumber && (
+                        {(user?.phoneNumber || order.address?.phoneNumber || order.address?.phone_number) && (
                           <div className="text-[10px] text-gray-400 truncate">
-                            {user.phoneNumber}
+                            {order.address?.phoneNumber || order.address?.phone_number || user?.phoneNumber}
                           </div>
                         )}
                       </div>

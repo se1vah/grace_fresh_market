@@ -6,6 +6,7 @@ import {
   Package,
   CreditCard,
   MapPin,
+  Phone,
   X,
   CheckCircle2,
   Truck,
@@ -110,6 +111,12 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
       return sum + origUnit * qty;
     }, 0) || (order.subTotal + totalDiscountAmount);
   const originalTotal = Number((originalSubtotal + (order.deliveryFee || 0)).toFixed(2));
+
+  const contactPhone =
+    order.address?.phoneNumber ||
+    order.address?.phone_number ||
+    order.user?.phoneNumber ||
+    '';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidthClass="max-w-2xl">
@@ -325,6 +332,33 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                       </div>
                     ) : (
                       <div className="text-xs text-gray-400">Address not specified</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contact Phone */}
+                <div className="flex items-start gap-2.5 pt-2 border-t border-[#E2EAE1]">
+                  <div className="p-1.5 rounded-lg bg-[#EAF2EA] text-[#2D5A27] shrink-0 mt-0.5">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold text-gray-400 uppercase">Phone Number</div>
+                    {contactPhone ? (
+                      <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                        <a
+                          href={`tel:${contactPhone}`}
+                          className="text-xs font-bold text-[#2D5A27] hover:underline font-quicksand inline-flex items-center gap-1"
+                        >
+                          {contactPhone}
+                        </a>
+                        {order.user?.fullName && (
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            ({order.user.fullName})
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 mt-0.5">Not provided</div>
                     )}
                   </div>
                 </div>
