@@ -163,8 +163,8 @@ async function handleUpdateSetting(request: NextRequest) {
 
     if (existing && existing.length > 0) {
       settingId = Number(existing[0].id);
-      existingMaintenanceNotificationTitle = existing[0].maintenance_notification_title;
-      existingMaintenanceNotificationDescription = existing[0].maintenance_notification_description;
+      existingMaintenanceNotificationTitle = existing[0].maintenance_notification_title || null;
+      existingMaintenanceNotificationDescription = existing[0].maintenance_notification_description || null;
       await query(
         'UPDATE app_settings SET email = ?, phone_number = ?, delivery_fee = ?, maintenance_notification_title = ?, maintenance_notification_description = ? WHERE id = ?',
         [cleanEmail, cleanPhone, deliveryFee, maintenanceNotificationTitle, maintenanceNotificationDescription, settingId]
@@ -208,8 +208,8 @@ async function handleUpdateSetting(request: NextRequest) {
     ) {
       try {
         await emitSocketEvent('maintenance-notification', {
-          maintenanceNotificationTitle: title.trim(),
-          maintenanceNotificationDescription: description.trim(),
+          maintenanceNotificationTitle: title,
+          maintenanceNotificationDescription: description,
         });
       } catch (socketError) {
         console.warn('[app-setting] Failed to emit maintenance-notification socket event (non-critical):', socketError);
