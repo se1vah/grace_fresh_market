@@ -404,6 +404,8 @@ export async function initShopDb(): Promise<void> {
           email VARCHAR(255) NOT NULL DEFAULT '',
           phone_number VARCHAR(50) NOT NULL DEFAULT '',
           delivery_fee DECIMAL(10,2) NULL DEFAULT NULL,
+          maintenance_notification_title VARCHAR(255) NULL DEFAULT NULL,
+          maintenance_notification_description TEXT NULL DEFAULT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
@@ -415,6 +417,23 @@ export async function initShopDb(): Promise<void> {
     try {
       await activePool.query(
         'ALTER TABLE app_settings ADD COLUMN delivery_fee DECIMAL(10,2) NULL DEFAULT NULL;'
+      );
+    } catch {
+      // The column already exists on newer installations.
+    }
+
+    // Migration for app_settings tables created before maintenance notification fields were added.
+    try {
+      await activePool.query(
+        'ALTER TABLE app_settings ADD COLUMN maintenance_notification_title VARCHAR(255) NULL DEFAULT NULL;'
+      );
+    } catch {
+      // The column already exists on newer installations.
+    }
+
+    try {
+      await activePool.query(
+        'ALTER TABLE app_settings ADD COLUMN maintenance_notification_description TEXT NULL DEFAULT NULL;'
       );
     } catch {
       // The column already exists on newer installations.

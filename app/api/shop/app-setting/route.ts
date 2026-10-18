@@ -51,7 +51,7 @@ function validateDeliveryFee(value: unknown): { value: number | null; error?: st
 export async function GET() {
   try {
     const rows = await query<any[]>(
-      'SELECT id, email, phone_number, delivery_fee, created_at, updated_at FROM app_settings ORDER BY id DESC LIMIT 1'
+      'SELECT id, email, phone_number, delivery_fee, maintenance_notification_title, maintenance_notification_description, created_at, updated_at FROM app_settings ORDER BY id DESC LIMIT 1'
     );
 
     if (!rows || rows.length === 0) {
@@ -60,9 +60,10 @@ export async function GET() {
         data: {
           id: 0,
           email: '',
-          phone_number: '',
           phoneNumber: '',
           deliveryFee: null,
+          maintenanceNotificationTitle: '',
+          maintenanceNotificationDescription: '',
         },
       });
     }
@@ -75,6 +76,8 @@ export async function GET() {
         email: setting.email || '',
         phoneNumber: setting.phone_number || '',
         deliveryFee: toDeliveryFee(setting.delivery_fee),
+        maintenanceNotificationTitle: setting.maintenance_notification_title || '',
+        maintenanceNotificationDescription: setting.maintenance_notification_description || '',
         created_at: setting.created_at,
         updated_at: setting.updated_at,
       },
@@ -95,6 +98,20 @@ async function handleUpdateSetting(request: NextRequest) {
     const emailInput = body?.email;
     const phoneInput = body?.phone_number ?? body?.phoneNumber;
     const deliveryFeeInput = body?.delivery_fee ?? body?.deliveryFee;
+    const maintenanceTitleInput =
+      body?.maintenance_notification_title ??
+      body?.maintenanceNotificationTitle ??
+      body?.maintaince_notification_title ??
+      body?.maintainceNotificationTitle ??
+      body?.notification_title ??
+      body?.notificationTitle;
+    const maintenanceDescriptionInput =
+      body?.maintenance_notification_description ??
+      body?.maintenanceNotificationDescription ??
+      body?.maintaince_notification_description ??
+      body?.maintainceNotificationDescription ??
+      body?.notification_description ??
+      body?.notificationDescription;
 
     // Validation
     if (!emailInput || typeof emailInput !== 'string' || !emailInput.trim()) {
@@ -126,6 +143,16 @@ async function handleUpdateSetting(request: NextRequest) {
     }
     const deliveryFee = deliveryFeeResult.value;
 
+    const maintenanceNotificationTitle =
+      maintenanceTitleInput === null || maintenanceTitleInput === undefined
+        ? null
+        : String(maintenanceTitleInput).trim();
+
+    const maintenanceNotificationDescription =
+      maintenanceDescriptionInput === null || maintenanceDescriptionInput === undefined
+        ? null
+        : String(maintenanceDescriptionInput).trim();
+
     // Check if an app_setting row exists
     const existing = await query<any[]>(
       'SELECT id FROM app_settings ORDER BY id DESC LIMIT 1'
@@ -136,20 +163,20 @@ async function handleUpdateSetting(request: NextRequest) {
     if (existing && existing.length > 0) {
       settingId = Number(existing[0].id);
       await query(
-        'UPDATE app_settings SET email = ?, phone_number = ?, delivery_fee = ? WHERE id = ?',
-        [cleanEmail, cleanPhone, deliveryFee, settingId]
+        'UPDATE app_settings SET email = ?, phone_number = ?, delivery_fee = ?, maintenance_notification_title = ?, maintenance_notification_description = ? WHERE id = ?',
+        [cleanEmail, cleanPhone, deliveryFee, maintenanceNotificationTitle, maintenanceNotificationDescription, settingId]
       );
     } else {
       const result = await query<any>(
-        'INSERT INTO app_settings (email, phone_number, delivery_fee) VALUES (?, ?, ?)',
-        [cleanEmail, cleanPhone, deliveryFee]
+        'INSERT INTO app_settings (email, phone_number, delivery_fee, maintenance_notification_title, maintenance_notification_description) VALUES (?, ?, ?, ?, ?)',
+        [cleanEmail, cleanPhone, deliveryFee, maintenanceNotificationTitle, maintenanceNotificationDescription]
       );
       settingId = Number(result.insertId);
     }
 
     // Fetch updated row
     const updatedRows = await query<any[]>(
-      'SELECT id, email, phone_number, delivery_fee, created_at, updated_at FROM app_settings WHERE id = ?',
+      'SELECT id, email, phone_number, delivery_fee, maintenance_notification_title, maintenance_notification_description, created_at, updated_at FROM app_settings WHERE id = ?',
       [settingId]
     );
 
@@ -158,6 +185,8 @@ async function handleUpdateSetting(request: NextRequest) {
       email: cleanEmail,
       phone_number: cleanPhone,
       delivery_fee: deliveryFee,
+      maintenance_notification_title: maintenanceNotificationTitle,
+      maintenance_notification_description: maintenanceNotificationDescription,
     };
 
     return NextResponse.json({
@@ -168,6 +197,8 @@ async function handleUpdateSetting(request: NextRequest) {
         email: updatedSetting.email,
         phoneNumber: updatedSetting.phone_number,
         deliveryFee: toDeliveryFee(updatedSetting.delivery_fee),
+        maintenanceNotificationTitle: updatedSetting.maintenance_notification_title || '',
+        maintenanceNotificationDescription: updatedSetting.maintenance_notification_description || '',
         updated_at: updatedSetting.updated_at,
       },
     });

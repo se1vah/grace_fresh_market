@@ -11,6 +11,8 @@ import {
   Loader2,
   X,
   IndianRupee,
+  Bell,
+  RotateCcw,
 } from 'lucide-react';
 
 interface AppSettingsData {
@@ -20,6 +22,14 @@ interface AppSettingsData {
   phoneNumber?: string;
   delivery_fee?: number | string | null;
   deliveryFee?: number | string | null;
+  maintenance_notification_title?: string | null;
+  maintenanceNotificationTitle?: string | null;
+  maintenance_notification_description?: string | null;
+  maintenanceNotificationDescription?: string | null;
+  notification_title?: string | null;
+  notificationTitle?: string | null;
+  notification_description?: string | null;
+  notificationDescription?: string | null;
   updated_at?: string;
 }
 
@@ -28,6 +38,8 @@ export default function AppSettingsForm() {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
+  const [maintenanceNotificationTitle, setMaintenanceNotificationTitle] = useState('');
+  const [maintenanceNotificationDescription, setMaintenanceNotificationDescription] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,6 +68,18 @@ export default function AppSettingsForm() {
         const fetchedEmail = data.data.email || '';
         const fetchedPhone = data.data.phone_number || data.data.phoneNumber || '';
         const fetchedDeliveryFee = data.data.delivery_fee ?? data.data.deliveryFee;
+        const fetchedTitle =
+          data.data.maintenance_notification_title ??
+          data.data.maintenanceNotificationTitle ??
+          data.data.notification_title ??
+          data.data.notificationTitle ??
+          '';
+        const fetchedDesc =
+          data.data.maintenance_notification_description ??
+          data.data.maintenanceNotificationDescription ??
+          data.data.notification_description ??
+          data.data.notificationDescription ??
+          '';
 
         setInitialData(data.data);
         setEmail(fetchedEmail);
@@ -65,6 +89,8 @@ export default function AppSettingsForm() {
             ? ''
             : String(fetchedDeliveryFee),
         );
+        setMaintenanceNotificationTitle(fetchedTitle);
+        setMaintenanceNotificationDescription(fetchedDesc);
       }
     } catch (err: any) {
       console.error('Error fetching app settings:', err);
@@ -151,6 +177,8 @@ export default function AppSettingsForm() {
           email: email.trim(),
           phone_number: phoneNumber.trim(),
           delivery_fee: deliveryFee.trim(),
+          maintenance_notification_title: maintenanceNotificationTitle.trim(),
+          maintenance_notification_description: maintenanceNotificationDescription.trim(),
         }),
       });
 
@@ -171,6 +199,20 @@ export default function AppSettingsForm() {
           savedDeliveryFee === null || savedDeliveryFee === undefined
             ? ''
             : String(savedDeliveryFee),
+        );
+        setMaintenanceNotificationTitle(
+          data.data.maintenance_notification_title ??
+          data.data.maintenanceNotificationTitle ??
+          data.data.notification_title ??
+          data.data.notificationTitle ??
+          ''
+        );
+        setMaintenanceNotificationDescription(
+          data.data.maintenance_notification_description ??
+          data.data.maintenanceNotificationDescription ??
+          data.data.notification_description ??
+          data.data.notificationDescription ??
+          ''
         );
       }
 
@@ -197,6 +239,20 @@ export default function AppSettingsForm() {
           ? ''
           : String(initialDeliveryFee),
       );
+      setMaintenanceNotificationTitle(
+        initialData.maintenance_notification_title ??
+        initialData.maintenanceNotificationTitle ??
+        initialData.notification_title ??
+        initialData.notificationTitle ??
+        ''
+      );
+      setMaintenanceNotificationDescription(
+        initialData.maintenance_notification_description ??
+        initialData.maintenanceNotificationDescription ??
+        initialData.notification_description ??
+        initialData.notificationDescription ??
+        ''
+      );
       setEmailError(null);
       setPhoneError(null);
       setDeliveryFeeError(null);
@@ -205,10 +261,18 @@ export default function AppSettingsForm() {
     }
   };
 
+  // Clears ONLY the two maintenance notification input fields (maintenance notification title and description)
+  const handleClearMaintenanceNotifications = () => {
+    setMaintenanceNotificationTitle('');
+    setMaintenanceNotificationDescription('');
+  };
+
   const isFormDirty = initialData
     ? email.trim() !== (initialData.email || '') ||
     phoneNumber.trim() !== (initialData.phone_number || initialData.phoneNumber || '') ||
-    deliveryFee.trim() !== String(initialData.delivery_fee ?? initialData.deliveryFee ?? '')
+    deliveryFee.trim() !== String(initialData.delivery_fee ?? initialData.deliveryFee ?? '') ||
+    maintenanceNotificationTitle.trim() !== (initialData.maintenance_notification_title ?? initialData.maintenanceNotificationTitle ?? initialData.notification_title ?? initialData.notificationTitle ?? '') ||
+    maintenanceNotificationDescription.trim() !== (initialData.maintenance_notification_description ?? initialData.maintenanceNotificationDescription ?? initialData.notification_description ?? initialData.notificationDescription ?? '')
     : false;
 
   return (
@@ -247,187 +311,293 @@ export default function AppSettingsForm() {
         </div>
       </div>
 
-      {/* Loading Skeleton Card */}
+      {/* Loading Skeleton Cards */}
       {loading ? (
-        <div className="bg-white p-8 rounded-2xl border border-[#E2EAE1] shadow-xs space-y-6">
-          <div className="flex items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 rounded-lg bg-gray-200"></div>
-            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+        <div className="space-y-6">
+          <div className="bg-white p-8 rounded-2xl border border-[#E2EAE1] shadow-xs space-y-6">
+            <div className="flex items-center gap-3 animate-pulse">
+              <div className="w-8 h-8 rounded-lg bg-gray-200"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+            </div>
+            <div className="space-y-4">
+              <div className="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+              <div className="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+            </div>
           </div>
-          <div className="space-y-4">
-            <div className="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
-            <div className="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+          <div className="bg-white p-8 rounded-2xl border border-[#E2EAE1] shadow-xs space-y-6">
+            <div className="flex items-center gap-3 animate-pulse">
+              <div className="w-8 h-8 rounded-lg bg-gray-200"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+            </div>
+            <div className="space-y-4">
+              <div className="h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+              <div className="h-24 bg-gray-100 rounded-xl animate-pulse"></div>
+            </div>
           </div>
         </div>
       ) : (
-        /* Settings Main Form Card */
-        <div className="bg-white rounded-2xl border border-[#E2EAE1] shadow-xs overflow-hidden">
-          {/* Card Header Banner */}
-          <div className="px-6 py-4 border-b border-[#E2EAE1] bg-[#F9FBF9] flex items-center justify-between">
-            <h2 className="font-quicksand font-bold text-base text-gray-800 flex items-center gap-2">
-              <Settings className="w-4 h-4 text-[#2D5A27]" />
-              Store Contact Configuration
-            </h2>
+        <form noValidate onSubmit={handleSubmit} className="space-y-6">
+          {/* Global Server Error Banner */}
+          {serverError && (
+            <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="font-quicksand font-semibold">{serverError}</div>
+            </div>
+          )}
+
+          {/* CARD 1: Store Contact Configuration */}
+          <div className="bg-white rounded-2xl border border-[#E2EAE1] shadow-xs overflow-hidden">
+            {/* Card Header Banner */}
+            <div className="px-6 py-4 border-b border-[#E2EAE1] bg-[#F9FBF9] flex items-center justify-between">
+              <div>
+                <h2 className="font-quicksand font-bold text-base text-gray-800 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-[#2D5A27]" />
+                  Store Contact Configuration
+                </h2>
+                <p className="text-[12px] text-gray-500 mt-0.5">
+                  General support channels and delivery fee configuration.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Field 1: Get Email */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="app-email"
+                    className="block font-quicksand font-bold text-sm text-gray-700"
+                  >
+                    Contact Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="app-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailError) setEmailError(null);
+                      }}
+                      placeholder="e.g. support@gracefreshmarket.com"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${emailError
+                        ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
+                        : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
+                        }`}
+                    />
+                  </div>
+                  {emailError ? (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {emailError}
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-gray-500">
+                      Used for user support notifications and app customer care inquiries.
+                    </p>
+                  )}
+                </div>
+
+                {/* Field 2: Get Phone Number */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="app-phone"
+                    className="block font-quicksand font-bold text-sm text-gray-700"
+                  >
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="app-phone"
+                      type="text"
+                      value={phoneNumber}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        if (phoneError) setPhoneError(null);
+                      }}
+                      placeholder="e.g. +1 (800) 555-0199"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${phoneError
+                        ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
+                        : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
+                        }`}
+                    />
+                  </div>
+                  {phoneError ? (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {phoneError}
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-gray-500">
+                      Primary helpline number displayed in the mobile application.
+                    </p>
+                  )}
+                </div>
+
+                {/* Field 3: Optional Delivery Fee */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="delivery-fee"
+                    className="block font-quicksand font-bold text-sm text-gray-700"
+                  >
+                    Delivery Fee <span className="text-gray-400 font-medium">(Optional)</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                      <IndianRupee className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="delivery-fee"
+                      type="text"
+                      inputMode="decimal"
+                      value={deliveryFee}
+                      aria-invalid={Boolean(deliveryFeeError)}
+                      aria-describedby={deliveryFeeError ? 'delivery-fee-error' : 'delivery-fee-help'}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        setDeliveryFee(nextValue);
+                        setDeliveryFeeError(getDeliveryFeeValidationError(nextValue));
+                      }}
+                      placeholder="e.g. 40.00"
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${deliveryFeeError
+                        ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
+                        : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
+                        }`}
+                    />
+                  </div>
+                  {deliveryFeeError ? (
+                    <div
+                      id="delivery-fee-error"
+                      role="alert"
+                      className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{deliveryFeeError}</span>
+                    </div>
+                  ) : (
+                    <p id="delivery-fee-help" className="text-[12px] text-gray-500">
+                      Leave empty when no delivery fee is configured. Maximum ₹100,000.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <form noValidate onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Global Server Error Banner */}
-            {serverError && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                <div className="font-quicksand font-semibold">{serverError}</div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Field 1: Get Email */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="app-email"
-                  className="block font-quicksand font-bold text-sm text-gray-700"
-                >
-                  Contact Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="app-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) setEmailError(null);
-                    }}
-                    placeholder="e.g. support@gracefreshmarket.com"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${emailError
-                      ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
-                      : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
-                      }`}
-                  />
+          {/* CARD 2: Maintenance Notification Card */}
+          <div className="bg-white rounded-2xl border border-[#E2EAE1] shadow-xs overflow-hidden">
+            {/* Card Header Banner with Clear Button */}
+            <div className="px-6 py-4 border-b border-[#E2EAE1] bg-[#F9FBF9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#EAF2EA] text-[#2D5A27]">
+                  <Bell className="w-4 h-4" />
                 </div>
-                {emailError ? (
-                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {emailError}
-                  </p>
-                ) : (
+                <div>
+                  <h2 className="font-quicksand font-bold text-base text-gray-800">
+                    Maintenance Notification
+                  </h2>
                   <p className="text-[12px] text-gray-500">
-                    Used for user support notifications and app customer care inquiries.
+                    Broadcast maintenance alerts and notices to mobile app users.
                   </p>
-                )}
-              </div>
-
-              {/* Field 2: Get Phone Number */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="app-phone"
-                  className="block font-quicksand font-bold text-sm text-gray-700"
-                >
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="app-phone"
-                    type="text"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      setPhoneNumber(e.target.value);
-                      if (phoneError) setPhoneError(null);
-                    }}
-                    placeholder="e.g. +1 (800) 555-0199"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${phoneError
-                      ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
-                      : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
-                      }`}
-                  />
                 </div>
-                {phoneError ? (
-                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {phoneError}
-                  </p>
-                ) : (
-                  <p className="text-[12px] text-gray-500">
-                    Primary helpline number displayed in the mobile application.
-                  </p>
-                )}
               </div>
 
-              {/* Field 3: Optional Delivery Fee */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="delivery-fee"
-                  className="block font-quicksand font-bold text-sm text-gray-700"
-                >
-                  Delivery Fee <span className="text-gray-400 font-medium">(Optional)</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <IndianRupee className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="delivery-fee"
-                    type="text"
-                    inputMode="decimal"
-                    value={deliveryFee}
-                    aria-invalid={Boolean(deliveryFeeError)}
-                    aria-describedby={deliveryFeeError ? 'delivery-fee-error' : 'delivery-fee-help'}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setDeliveryFee(nextValue);
-                      setDeliveryFeeError(getDeliveryFeeValidationError(nextValue));
-                    }}
-                    placeholder="e.g. 40.00"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm transition font-sans focus:outline-none focus:ring-2 ${deliveryFeeError
-                      ? 'border-red-400 focus:ring-red-100 bg-red-50/20'
-                      : 'border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-[#2D5A27]/10 bg-white'
-                      }`}
-                  />
-                </div>
-                {deliveryFeeError ? (
-                  <div
-                    id="delivery-fee-error"
-                    role="alert"
-                    className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 animate-in fade-in slide-in-from-top-1 duration-200"
-                  >
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>{deliveryFeeError}</span>
-                  </div>
-                ) : (
-                  <p id="delivery-fee-help" className="text-[12px] text-gray-500">
-                    Leave empty when no delivery fee is configured. Maximum ₹100,000.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="pt-4 border-t border-[#E2EAE1] flex items-center justify-between gap-4">
+              {/* Clear Button: Clears ONLY the two maintenance notification fields */}
               <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2.5 bg-[#2D5A27] hover:bg-[#21431d] disabled:bg-[#2D5A27]/60 text-white font-quicksand font-bold text-xs sm:text-sm rounded-xl inline-flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+                type="button"
+                id="clear-maintenance-notification-fields-btn"
+                onClick={handleClearMaintenanceNotifications}
+                disabled={!maintenanceNotificationTitle && !maintenanceNotificationDescription}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-quicksand font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer self-start sm:self-auto shadow-2xs"
+                title="Clear only maintenance notification title and description"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>Save Settings</span>
-                  </>
-                )}
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Clear Notification Fields</span>
               </button>
             </div>
-          </form>
-        </div>
+
+            <div className="p-6 space-y-5">
+              {/* Field 1: Maintenance Notification Title */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="maintenance-notification-title"
+                  className="block font-quicksand font-bold text-sm text-gray-700"
+                >
+                  Maintenance Notification Title
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="maintenance-notification-title"
+                    type="text"
+                    value={maintenanceNotificationTitle}
+                    onChange={(e) => setMaintenanceNotificationTitle(e.target.value)}
+                    placeholder="e.g. Scheduled Maintenance Notice 🛠️"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-2 focus:ring-[#2D5A27]/10 bg-white text-sm transition font-sans focus:outline-none"
+                  />
+                </div>
+                <p className="text-[12px] text-gray-500">
+                  Headline title displayed for app maintenance announcements.
+                </p>
+              </div>
+
+              {/* Field 2: Maintenance Notification Description (Text Area) */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="maintenance-notification-description"
+                  className="block font-quicksand font-bold text-sm text-gray-700"
+                >
+                  Maintenance Notification Description
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="maintenance-notification-description"
+                    rows={4}
+                    value={maintenanceNotificationDescription}
+                    onChange={(e) => setMaintenanceNotificationDescription(e.target.value)}
+                    placeholder="e.g. Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM. Ordering will be temporarily unavailable."
+                    className="w-full p-3 rounded-xl border border-[#E2EAE1] focus:border-[#2D5A27] focus:ring-2 focus:ring-[#2D5A27]/10 bg-white text-sm transition font-sans focus:outline-none resize-y min-h-[100px]"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[12px] text-gray-500">
+                  <p>Detailed maintenance description displayed to application users.</p>
+                  {maintenanceNotificationDescription.length > 0 && (
+                    <span>{maintenanceNotificationDescription.length} characters</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Actions Bar */}
+          <div className="flex items-center justify-between gap-4 pt-1">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2.5 bg-[#2D5A27] hover:bg-[#21431d] disabled:bg-[#2D5A27]/60 text-white font-quicksand font-bold text-xs sm:text-sm rounded-xl inline-flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Settings</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

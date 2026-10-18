@@ -30,6 +30,8 @@ Accept: application/json
     "email": "info@gracefreshmarket.com",
     "phoneNumber": "+1 (800) 555-0199",
     "deliveryFee": 40,
+    "maintenanceNotificationTitle": "Scheduled Maintenance Notice 🛠️",
+    "maintenanceNotificationDescription": "Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM.",
     "created_at": "2026-09-01T17:55:00.000Z",
     "updated_at": "2026-09-01T17:55:00.000Z"
   }
@@ -40,7 +42,7 @@ Accept: application/json
 
 ## 2. PUT `/api/shop/app-setting`
 
-Updates the application contact email, phone number, and optional delivery fee. *(Note: `POST` is also supported as an alias).*
+Updates the application contact email, phone number, optional delivery fee, and optional maintenance notification message settings. *(Note: `POST` is also supported as an alias).*
 
 ### Request Details
 - **HTTP Method**: `PUT` or `POST`
@@ -54,6 +56,8 @@ Updates the application contact email, phone number, and optional delivery fee. 
 | `email` | `string` | **Yes** | Valid contact email address. |
 | `phone_number` | `string` | **Yes** | Contact phone number (also accepts `phoneNumber`). |
 | `delivery_fee` | `number` or `string` | No | Optional delivery fee in Indian rupees (also accepts `deliveryFee`). Blank or omitted stores `null`; valid values are ₹0–₹100,000 with up to two decimal places. |
+| `maintenance_notification_title` | `string` | No | Optional maintenance notification title (also accepts `maintenanceNotificationTitle`). |
+| `maintenance_notification_description` | `string` | No | Optional maintenance notification description/body (also accepts `maintenanceNotificationDescription`). |
 
 ### Example Request Body
 
@@ -61,7 +65,9 @@ Updates the application contact email, phone number, and optional delivery fee. 
 {
   "email": "support@gracefreshmarket.com",
   "phone_number": "+1 (800) 123-4567",
-  "delivery_fee": 40.5
+  "delivery_fee": 40.5,
+  "maintenance_notification_title": "Scheduled Maintenance Notice 🛠️",
+  "maintenance_notification_description": "Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM."
 }
 ```
 
@@ -76,6 +82,8 @@ Updates the application contact email, phone number, and optional delivery fee. 
     "email": "support@gracefreshmarket.com",
     "phoneNumber": "+1 (800) 123-4567",
     "deliveryFee": 40.5,
+    "maintenanceNotificationTitle": "Scheduled Maintenance Notice 🛠️",
+    "maintenanceNotificationDescription": "Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM.",
     "updated_at": "2026-09-01T17:56:00.000Z"
   }
 }
