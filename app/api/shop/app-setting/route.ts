@@ -197,6 +197,7 @@ async function handleUpdateSetting(request: NextRequest) {
     const description = updatedSetting.maintenance_notification_description || null;
 
     console.log("1111", {
+      updatedSetting,
       title,
       description,
       existingMaintenanceNotificationTitle,
