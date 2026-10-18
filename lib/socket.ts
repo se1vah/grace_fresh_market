@@ -98,8 +98,7 @@ export async function emitSocketEvent(
     const socket = getSocket();
     await connectSocket(socket);
     console.log("222222", { eventName, payload })
-    const response = await socket.timeout(5000).emitWithAck(eventName, payload);
-    console.log("[Socket] Server acknowledged:", response)
+    socket.emit(eventName, payload);
   } catch (error) {
     console.error(
       `[socket] Failed to emit "${eventName}" to ${getSocketServerUrl()}.`,
