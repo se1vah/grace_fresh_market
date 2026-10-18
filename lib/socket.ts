@@ -98,7 +98,7 @@ export async function emitSocketEvent(
     const socket = getSocket();
     await connectSocket(socket);
     console.log("222222", { eventName, payload })
-    socket.timeout(5000).emitWithAck(eventName, payload);
+    await socket.timeout(5000).emitWithAck(eventName, payload);
   } catch (error) {
     console.error(
       `[socket] Failed to emit "${eventName}" to ${getSocketServerUrl()}.`,
