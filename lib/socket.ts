@@ -97,6 +97,7 @@ export async function emitSocketEvent(
   try {
     const socket = getSocket();
     await connectSocket(socket);
+    console.log("222222", { eventName, payload })
     socket.emit(eventName, payload);
   } catch (error) {
     console.error(
