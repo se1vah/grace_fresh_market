@@ -137,10 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Resolve phoneNumber: if null/empty/not provided, take users table phoneNumber
     const rawPhone = body.phoneNumber ?? body.phone_number ?? body.phone ?? body.mobile;
-    let phoneNumber = rawPhone !== undefined && rawPhone !== null ? String(rawPhone).trim() : '';
-    if (!phoneNumber) {
-      phoneNumber = (userCheck[0]?.phoneNumber || '').trim();
-    }
+    let phoneNumber = rawPhone !== undefined && rawPhone !== null ? String(rawPhone).trim() : null;
 
     // Validation
     if (!buildingName) {
