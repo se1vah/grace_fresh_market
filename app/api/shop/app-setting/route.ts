@@ -198,8 +198,8 @@ async function handleUpdateSetting(request: NextRequest) {
 
     console.log("1111", {
       updatedSetting,
-      title: title?.trim(),
-      description: description?.trim(),
+      title: title,
+      description: description,
       existingMaintenanceNotificationTitle,
       existingMaintenanceNotificationDescription
     })
@@ -209,8 +209,8 @@ async function handleUpdateSetting(request: NextRequest) {
     ) {
       try {
         await emitSocketEvent('maintenance-notification', {
-          maintenanceNotificationTitle: title?.trim(),
-          maintenanceNotificationDescription: description?.trim(),
+          maintenanceNotificationTitle: title,
+          maintenanceNotificationDescription: description,
         });
       } catch (socketError) {
         console.warn('[app-setting] Failed to emit maintenance-notification socket event (non-critical):', socketError);
