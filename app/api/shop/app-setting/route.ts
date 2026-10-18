@@ -159,10 +159,12 @@ async function handleUpdateSetting(request: NextRequest) {
       'SELECT id FROM app_settings ORDER BY id DESC LIMIT 1'
     );
 
-    let settingId: number;
+    let settingId: number, existingMaintenanceNotificationTitle: string | null = null, existingMaintenanceNotificationDescription: string | null = null;
 
     if (existing && existing.length > 0) {
       settingId = Number(existing[0].id);
+      existingMaintenanceNotificationTitle = existing[0].maintenance_notification_title;
+      existingMaintenanceNotificationDescription = existing[0].maintenance_notification_description;
       await query(
         'UPDATE app_settings SET email = ?, phone_number = ?, delivery_fee = ?, maintenance_notification_title = ?, maintenance_notification_description = ? WHERE id = ?',
         [cleanEmail, cleanPhone, deliveryFee, maintenanceNotificationTitle, maintenanceNotificationDescription, settingId]
@@ -191,16 +193,12 @@ async function handleUpdateSetting(request: NextRequest) {
     };
 
     // Emit socket event if title and description are not null
-    const title = updatedSetting.maintenance_notification_title;
-    const description = updatedSetting.maintenance_notification_description;
+    const title = updatedSetting.maintenance_notification_title || null;
+    const description = updatedSetting.maintenance_notification_description || null;
 
     if (
-      title !== null &&
-      title !== undefined &&
-      title.trim() !== '' &&
-      description !== null &&
-      description !== undefined &&
-      description.trim() !== ''
+      title !== existingMaintenanceNotificationTitle &&
+      description !== existingMaintenanceNotificationDescription
     ) {
       try {
         await emitSocketEvent('maintenance-notification', {
