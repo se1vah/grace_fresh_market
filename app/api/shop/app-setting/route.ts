@@ -156,15 +156,15 @@ async function handleUpdateSetting(request: NextRequest) {
 
     // Check if an app_setting row exists
     const existing = await query<any[]>(
-      'SELECT id FROM app_settings ORDER BY id DESC LIMIT 1'
+      'SELECT id, maintenance_notification_title, maintenance_notification_description FROM app_settings ORDER BY id DESC LIMIT 1'
     );
 
     let settingId: number, existingMaintenanceNotificationTitle: string | null = null, existingMaintenanceNotificationDescription: string | null = null;
 
     if (existing && existing.length > 0) {
       settingId = Number(existing[0].id);
-      existingMaintenanceNotificationTitle = existing[0].maintenance_notification_title || null;
-      existingMaintenanceNotificationDescription = existing[0].maintenance_notification_description || null;
+      existingMaintenanceNotificationTitle = existing[0].maintenance_notification_title ? String(existing[0].maintenance_notification_title).trim() : null;
+      existingMaintenanceNotificationDescription = existing[0].maintenance_notification_description ? String(existing[0].maintenance_notification_description).trim() : null;
       await query(
         'UPDATE app_settings SET email = ?, phone_number = ?, delivery_fee = ?, maintenance_notification_title = ?, maintenance_notification_description = ? WHERE id = ?',
         [cleanEmail, cleanPhone, deliveryFee, maintenanceNotificationTitle, maintenanceNotificationDescription, settingId]
