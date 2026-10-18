@@ -89,6 +89,23 @@ Updates the application contact email, phone number, optional delivery fee, and 
 }
 ```
 
+### Real-Time Socket Event
+
+When `maintenance_notification_title` and `maintenance_notification_description` are both non-null and not empty, updating app settings dispatches a real-time Socket.IO event:
+
+- **Event Name**: `maintenance-notification`
+- **Payload**:
+```json
+{
+  "title": "Scheduled Maintenance Notice 🛠️",
+  "description": "Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM.",
+  "maintenanceNotificationTitle": "Scheduled Maintenance Notice 🛠️",
+  "maintenanceNotificationDescription": "Grace Fresh Market app will undergo scheduled maintenance tonight from 1:00 AM to 3:00 AM.",
+  "updated_at": "2026-09-01T17:56:00.000Z",
+  "timestamp": "2026-09-01T17:56:00.000Z"
+}
+```
+
 ### Example Validation Error Response (`400 Bad Request`)
 
 ```json

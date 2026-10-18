@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { emitSocketEvent } from '@/lib/socket';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DELIVERY_FEE_REGEX = /^\d+(?:\.\d{1,2})?$/;
@@ -188,6 +189,28 @@ async function handleUpdateSetting(request: NextRequest) {
       maintenance_notification_title: maintenanceNotificationTitle,
       maintenance_notification_description: maintenanceNotificationDescription,
     };
+
+    // Emit socket event if title and description are not null
+    const title = updatedSetting.maintenance_notification_title;
+    const description = updatedSetting.maintenance_notification_description;
+
+    if (
+      title !== null &&
+      title !== undefined &&
+      title.trim() !== '' &&
+      description !== null &&
+      description !== undefined &&
+      description.trim() !== ''
+    ) {
+      try {
+        await emitSocketEvent('maintenance-notification', {
+          maintenanceNotificationTitle: title.trim(),
+          maintenanceNotificationDescription: description.trim(),
+        });
+      } catch (socketError) {
+        console.warn('[app-setting] Failed to emit maintenance-notification socket event (non-critical):', socketError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
