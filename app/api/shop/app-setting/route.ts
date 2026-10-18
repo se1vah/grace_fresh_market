@@ -196,6 +196,12 @@ async function handleUpdateSetting(request: NextRequest) {
     const title = updatedSetting.maintenance_notification_title || null;
     const description = updatedSetting.maintenance_notification_description || null;
 
+    console.log("1111", {
+      title,
+      description,
+      existingMaintenanceNotificationTitle,
+      existingMaintenanceNotificationDescription
+    })
     if (
       title !== existingMaintenanceNotificationTitle &&
       description !== existingMaintenanceNotificationDescription
