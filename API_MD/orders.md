@@ -591,6 +591,8 @@ Supports both numeric IDs (`101`) and `#GFM-` formatted strings (`#GFM-101`).
   - `GET /api/users/orders/:id`
   - `GET /api/user/orders/:id`
   - `GET /api/shop/orders/:id` *(Shop admin management)*
+  - `GET /api/shop/orders/:id?format=pdf` *(Download PDF Invoice)*
+  - `GET /api/shop/orders/:id/invoice` *(Download PDF Invoice dedicated route)*
 - **Query Parameter Alternative**:
   - `GET /api/users/orders/get-by-id?orderId=:id`
   - `GET /api/user/orders/get-by-id?orderId=:id`
@@ -652,6 +654,13 @@ Authorization: Bearer <token>
 GET /api/user/orders/%23GFM-101
 Authorization: Bearer <token>
 ```
+
+#### Download Invoice PDF:
+```http
+GET /api/shop/orders/101?format=pdf
+Authorization: Bearer <shop_token>
+```
+*Returns `Content-Type: application/pdf` with `Content-Disposition: attachment; filename="Invoice-GFM-101.pdf"`.*
 
 ---
 

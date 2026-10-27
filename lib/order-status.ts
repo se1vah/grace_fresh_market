@@ -1,10 +1,10 @@
-import { 
-  Clock, 
-  Package, 
+import {
+  Clock,
+  Package,
   Truck,
-  CheckCircle2, 
+  CheckCircle2,
   Ban,
-  LucideIcon 
+  LucideIcon
 } from 'lucide-react';
 
 /**
@@ -292,5 +292,15 @@ export const STATUS_UI_CONFIG: Record<OrderStatusType, StatusUIConfig> = {
     description: 'Order cancelled',
   },
 };
+
+/**
+ * Parses numeric ID or formatted ID like #GFM-123 / GFM-123
+ */
+export function parseOrderId(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/^#?GFM-/i, '').trim();
+  const parsed = Number(cleaned);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
 
 export * from './format-quantity';

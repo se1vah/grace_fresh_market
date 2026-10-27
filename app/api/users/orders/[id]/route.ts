@@ -4,16 +4,7 @@ import { query } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
 import { getOrderById } from '@/lib/services/get-all-orders';
-
-/**
- * Parses numeric ID or formatted ID like #GFM-123 / GFM-123
- */
-export function parseOrderId(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const cleaned = raw.replace(/^#?GFM-/i, '').trim();
-  const parsed = Number(cleaned);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
+import { parseOrderId } from '@/lib/order-status';
 
 async function authenticateShop(request: NextRequest) {
   const cookieStore = await cookies();

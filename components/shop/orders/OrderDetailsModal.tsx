@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ShoppingBag,
   Package,
@@ -14,7 +14,9 @@ import {
   Ban,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Download,
+  Loader2
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import type { UserOrder, OrderItem } from '@/lib/services/get-all-orders';
@@ -27,7 +29,51 @@ interface OrderDetailsModalProps {
 }
 
 export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
   if (!order) return null;
+
+  const handleDownloadInvoice = async () => {
+    if (!order || isDownloading) return;
+    try {
+      setIsDownloading(true);
+      setDownloadError(null);
+
+      const response = await fetch(`/api/shop/orders/${order.id}?format=pdf`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/pdf',
+        },
+      });
+
+      if (!response.ok) {
+        let errorMsg = 'Failed to download invoice';
+        try {
+          const errData = await response.json();
+          if (errData?.error) errorMsg = errData.error;
+        } catch {
+          // ignore non-json
+        }
+        throw new Error(errorMsg);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Invoice-GFM-${order.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err: any) {
+      console.error('Invoice download error:', err);
+      setDownloadError(err?.message || 'Could not download invoice');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const formatDate = (dateValue?: string | Date) => {
     if (!dateValue) return 'N/A';
@@ -208,8 +254,8 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                     item.discountAmount !== undefined && item.discountAmount !== null && Number(item.discountAmount) > 0
                       ? Number(item.discountAmount)
                       : (unitOriginalPrice > unitFinalPrice
-                          ? Number(((unitOriginalPrice - unitFinalPrice) * item.quantity).toFixed(2))
-                          : 0);
+                        ? Number(((unitOriginalPrice - unitFinalPrice) * item.quantity).toFixed(2))
+                        : 0);
 
                   const originalItemTotal = Number((unitOriginalPrice * item.quantity).toFixed(2));
                   const hasItemDiscount = itemDiscount > 0;
@@ -424,15 +470,43 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-[#E2EAE1] flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[#2D5A27] hover:bg-[#21431d] text-white font-quicksand font-bold text-sm shadow-xs transition cursor-pointer"
-          >
-            Close
-          </button>
+          <div className="px-6 py-4 bg-gray-50 border-t border-[#E2EAE1] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div>
+              {downloadError && (
+                <span className="text-xs text-rose-600 font-semibold font-quicksand">
+                  {downloadError}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleDownloadInvoice}
+                disabled={isDownloading}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#2D5A27] text-[#2D5A27] hover:bg-[#EAF2EA] font-quicksand font-bold text-sm shadow-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-[#2D5A27]" />
+                    <span>Downloading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 text-[#2D5A27]" />
+                    <span>Download Invoice</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 rounded-xl bg-[#2D5A27] hover:bg-[#21431d] text-white font-quicksand font-bold text-sm shadow-xs transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
     </Modal>
   );
 }
