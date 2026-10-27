@@ -154,9 +154,17 @@ export async function generateInvoicePdf(
 ): Promise<Buffer> {
   const contact = { ...DEFAULT_SHOP_CONTACT, ...shopContact };
 
-  const regularFont = path.join(process.cwd(), 'lib/fonts/Roboto-Regular.ttf');
-  const boldFont = path.join(process.cwd(), 'lib/fonts/Roboto-Bold.ttf');
-  const mediumFont = path.join(process.cwd(), 'lib/fonts/Roboto-Medium.ttf');
+  const regularFont = fs.existsSync(path.join(process.cwd(), 'lib/fonts/MuktaMalar-Regular.ttf'))
+    ? path.join(process.cwd(), 'lib/fonts/MuktaMalar-Regular.ttf')
+    : path.join(process.cwd(), 'lib/fonts/Roboto-Regular.ttf');
+
+  const boldFont = fs.existsSync(path.join(process.cwd(), 'lib/fonts/MuktaMalar-Bold.ttf'))
+    ? path.join(process.cwd(), 'lib/fonts/MuktaMalar-Bold.ttf')
+    : path.join(process.cwd(), 'lib/fonts/Roboto-Bold.ttf');
+
+  const mediumFont = fs.existsSync(path.join(process.cwd(), 'lib/fonts/MuktaMalar-SemiBold.ttf'))
+    ? path.join(process.cwd(), 'lib/fonts/MuktaMalar-SemiBold.ttf')
+    : path.join(process.cwd(), 'lib/fonts/Roboto-Medium.ttf');
 
   const logoPath = path.join(process.cwd(), 'public/images/invoice-logo.png');
   const bannerPath = path.join(process.cwd(), 'public/images/invoice-banner.png');
@@ -426,7 +434,6 @@ export async function generateInvoicePdf(
     const rowHeight = 48;
 
     items.forEach((item, index) => {
-      const rowY = currentY;
       const subcategoryName = item.subcategory?.subcategoryName || `Item #${item.subcategoryId}`;
       const subCategoryType = item.subcategory?.subCategoryType || (item as any).subCategoryType;
       const typeNorm = normalizeSubCategoryType(subCategoryType);
@@ -447,11 +454,31 @@ export async function generateInvoicePdf(
         item.discountAmount !== undefined && item.discountAmount !== null && Number(item.discountAmount) > 0
           ? Number(item.discountAmount)
           : (unitOriginalPrice > unitFinalPrice
-              ? Number(((unitOriginalPrice - unitFinalPrice) * item.quantity).toFixed(2))
-              : 0);
+            ? Number(((unitOriginalPrice - unitFinalPrice) * item.quantity).toFixed(2))
+            : 0);
 
       const originalItemTotal = Number((unitOriginalPrice * item.quantity).toFixed(2));
       const hasDiscount = itemDiscount > 0;
+
+      const thumbX = colItem;
+      const thumbSize = 34;
+      const textX = thumbX + thumbSize + 8;
+      const textWidth = colQty - textX - 8;
+
+      doc.font(fontBold).fontSize(9.5);
+      const titleHeight = doc.heightOfString(subcategoryName, { width: textWidth });
+      const currentItemRowHeight = Math.max(
+        48,
+        hasDiscount ? 8 + titleHeight + 16 : 10 + titleHeight + 10
+      );
+
+      // Page overflow check
+      if (currentY + currentItemRowHeight > doc.page.height - 120) {
+        doc.addPage();
+        currentY = margin;
+      }
+
+      const rowY = currentY;
 
       // 1. # Index
       doc
@@ -462,9 +489,7 @@ export async function generateInvoicePdf(
 
       // 2. Product Thumbnail (36x36 with light border)
       const imgBuffer = itemImageBuffers[index];
-      const thumbX = colItem;
       const thumbY = rowY + 6;
-      const thumbSize = 34;
 
       if (imgBuffer) {
         try {
@@ -492,12 +517,12 @@ export async function generateInvoicePdf(
       }
 
       // 3. Product Title & Discount Subtext
-      const textX = thumbX + thumbSize + 8;
+      const titleY = hasDiscount ? rowY + 7 : rowY + Math.max(8, (currentItemRowHeight - titleHeight) / 2);
       doc
         .font(fontBold)
         .fontSize(9.5)
         .fillColor(COLORS.textDark)
-        .text(subcategoryName, textX, rowY + (hasDiscount ? 10 : 14), { width: 190 });
+        .text(subcategoryName, textX, titleY, { width: textWidth });
 
       if (hasDiscount) {
         const discountText = `Original: ₹${originalItemTotal.toFixed(2)} | Savings: ₹${itemDiscount.toFixed(2)}`;
@@ -505,7 +530,7 @@ export async function generateInvoicePdf(
           .font(fontRegular)
           .fontSize(7.5)
           .fillColor(COLORS.textLight)
-          .text(discountText, textX, rowY + 23);
+          .text(discountText, textX, titleY + titleHeight + 2, { width: textWidth });
       }
 
       // 4. Quantity (e.g. "50 KG", "2 QTY", "250g")
@@ -536,7 +561,7 @@ export async function generateInvoicePdf(
         });
 
       // Bottom Row Border
-      currentY += rowHeight;
+      currentY += currentItemRowHeight;
       doc
         .moveTo(margin, currentY)
         .lineTo(margin + contentWidth, currentY)
