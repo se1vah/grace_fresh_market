@@ -19,6 +19,7 @@ export interface CategorySimple {
   categoryName?: string;
   image?: string;
   status?: string;
+  sortOrder?: number | null;
 }
 
 export interface SubCategoryData {

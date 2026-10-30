@@ -34,6 +34,7 @@ This document details the **SubCategory API endpoints** used in the Grace Fresh 
 ## GET `/api/shop/sub-categories`
 
 Retrieves a paginated list of subcategories including associated parent category information. Supports filtering by text search and specific parent category ID.
+Results are sorted primarily based on their parent category's `sort_order` (`ORDER BY CASE WHEN c.sort_order IS NULL THEN 1 ELSE 0 END ASC, c.sort_order ASC, c.id DESC, s.id DESC`).
 
 ### Request Details
 - **HTTP Method**: `GET`
@@ -80,6 +81,7 @@ Retrieves a paginated list of subcategories including associated parent category
         "category_name": "Fresh Vegetables",
         "image": "/images/category/fresh-vegetables-1787510000000.jpg",
         "status": "active",
+        "sort_order": 1,
         "createdAt": "2026-08-23T18:00:00.000Z",
         "updatedAt": "2026-08-23T18:00:00.000Z"
       },

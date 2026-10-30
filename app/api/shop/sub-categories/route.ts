@@ -40,6 +40,7 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
       category_name: row.category_name,
       image: row.category_image,
       status: row.category_status,
+      sortOrder: row.category_sort_order !== null && row.category_sort_order !== undefined ? Number(row.category_sort_order) : null,
       createdAt: row.category_created_at,
       updatedAt: row.category_updated_at,
     },
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest) {
       c.category_name,
       c.image as category_image,
       c.status as category_status,
+      c.sort_order as category_sort_order,
       c.created_at as category_created_at,
       c.updated_at as category_updated_at
     `;
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
        ${whereSql}
-       ORDER BY s.id DESC
+       ORDER BY CASE WHEN c.sort_order IS NULL THEN 1 ELSE 0 END ASC, c.sort_order ASC, c.id DESC, s.id DESC
        LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
 
     const rawRows = await query<any[]>(listSql, queryParams);
@@ -345,10 +347,10 @@ export async function POST(request: NextRequest) {
     }
 
     const rawNewRow = await query<any[]>(
-      `SELECT s.*, c.category_name, c.image as category_image, c.status as category_status
+      `SELECT s.*, c.category_name, c.image as category_image, c.status as category_status, c.sort_order as category_sort_order
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
-       WHERE s.id = ?`,
+       WHERE s.id = ? `,
       [newSubCategoryId]
     );
 

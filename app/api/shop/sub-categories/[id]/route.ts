@@ -42,6 +42,7 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
       category_name: row.category_name,
       image: row.category_image,
       status: row.category_status,
+      sortOrder: row.category_sort_order !== null && row.category_sort_order !== undefined ? Number(row.category_sort_order) : null,
       createdAt: row.category_created_at,
       updatedAt: row.category_updated_at,
     },
@@ -66,7 +67,7 @@ export async function GET(
     const rows = await query<any[]>(
       `SELECT 
         s.id, s.category_id, s.subcategory_name, s.sub_category_type, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
-        c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
+        c.category_name, c.image as category_image, c.status as category_status, c.sort_order as category_sort_order, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
        WHERE s.id = ?`,
@@ -331,7 +332,7 @@ export async function PUT(
     const fetchedRows = await query<any[]>(
       `SELECT 
         s.id, s.category_id, s.subcategory_name, s.sub_category_type, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
-        c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
+        c.category_name, c.image as category_image, c.status as category_status, c.sort_order as category_sort_order, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
        WHERE s.id = ?`,

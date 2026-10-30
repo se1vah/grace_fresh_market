@@ -6,44 +6,67 @@ const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD ?? '';
 const DB_NAME = process.env.DB_NAME || 'grace_fresh_market_local';
 
-let pool: mysql.Pool | null = null;
-let initialized = false;
+const globalForDb = globalThis as unknown as {
+  __shop_db_pool?: mysql.Pool;
+  __shop_db_initialized?: boolean;
+  __shop_db_init_promise?: Promise<void> | null;
+};
 
 export function getPool(): mysql.Pool {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: DB_HOST,
-      port: DB_PORT,
-      user: DB_USER,
-      password: DB_PASSWORD,
-      database: DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+      if(!globalForDb.__shop_db_pool) {
+      globalForDb.__shop_db_pool = mysql.createPool({
+        host: DB_HOST,
+        port: DB_PORT,
+        user: DB_USER,
+        password: DB_PASSWORD,
+        database: DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+    }
+    return globalForDb.__shop_db_pool;
   }
-  return pool;
-}
 
-export async function initShopDb(): Promise<void> {
-  if (initialized) return;
+    async function execWithRetry(
+      pool: mysql.Pool,
+      sql: string,
+      params?: any[],
+      maxRetries = 3
+    ): Promise<any> {
+      for (let i = 1; i <= maxRetries; i++) {
+        try {
+          return await pool.query(sql, params);
+        } catch (err: any) {
+          const isDeadlock =
+            err?.code === 'ER_LOCK_DEADLOCK' ||
+            err?.errno === 1213 ||
+            err?.code === 'ER_LOCK_WAIT_TIMEOUT';
+          if (isDeadlock && i < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 200 * i));
+            continue;
+          }
+          throw err;
+        }
+      }
+    }
 
-  try {
-    // Ensure Database exists
-    const tempConnection = await mysql.createConnection({
-      host: DB_HOST,
-      port: DB_PORT,
-      user: DB_USER,
-      password: DB_PASSWORD,
-    });
+      async function performDbInitialization(): Promise<void> {
+        // Ensure Database exists
+        const tempConnection = await mysql.createConnection({
+          host: DB_HOST,
+          port: DB_PORT,
+          user: DB_USER,
+          password: DB_PASSWORD,
+        });
 
-    await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-    await tempConnection.end();
+        await tempConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
+        await tempConnection.end();
 
-    const activePool = getPool();
+        const activePool = getPool();
 
-    // Ensure shop_user table exists
-    const createShopUserTableQuery = `
+        // Ensure shop_user table exists
+        const createShopUserTableQuery = `
       CREATE TABLE IF NOT EXISTS shop_user (
           id CHAR(36) PRIMARY KEY,
           email VARCHAR(255) NOT NULL UNIQUE,
@@ -56,17 +79,17 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createShopUserTableQuery);
+        await activePool.query(createShopUserTableQuery);
 
-    // Migration for existing shop_user table without fcmToken column
-    try {
-      await activePool.query(`ALTER TABLE shop_user ADD COLUMN fcmToken TEXT NULL;`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration for existing shop_user table without fcmToken column
+        try {
+          await activePool.query(`ALTER TABLE shop_user ADD COLUMN fcmToken TEXT NULL;`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    // Ensure categories table exists
-    const createCategoriesTableQuery = `
+        // Ensure categories table exists
+        const createCategoriesTableQuery = `
       CREATE TABLE IF NOT EXISTS categories (
           id INT AUTO_INCREMENT PRIMARY KEY,
           category_name VARCHAR(255) NOT NULL,
@@ -82,10 +105,10 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createCategoriesTableQuery);
+        await activePool.query(createCategoriesTableQuery);
 
-    // Ensure subcategories table exists
-    const createSubCategoriesTableQuery = `
+        // Ensure subcategories table exists
+        const createSubCategoriesTableQuery = `
       CREATE TABLE IF NOT EXISTS subcategories (
           id INT AUTO_INCREMENT PRIMARY KEY,
           category_id INT NOT NULL,
@@ -107,61 +130,61 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createSubCategoriesTableQuery);
+        await activePool.query(createSubCategoriesTableQuery);
 
-    // Migration: Add sub_category_type column to subcategories table if missing
-    try {
-      await activePool.query(`ALTER TABLE subcategories ADD COLUMN sub_category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration: Add sub_category_type column to subcategories table if missing
+        try {
+          await activePool.query(`ALTER TABLE subcategories ADD COLUMN sub_category_type ENUM('gram', 'quantity') NOT NULL DEFAULT 'gram';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    // Migration: Copy category_type from categories to subcategories if categories.category_type exists
-    try {
-      await activePool.query(`
+        // Migration: Copy category_type from categories to subcategories if categories.category_type exists
+        try {
+          await activePool.query(`
         UPDATE subcategories s
         JOIN categories c ON s.category_id = c.id
         SET s.sub_category_type = c.category_type
         WHERE c.category_type IS NOT NULL;
       `);
-    } catch (err) {
-      // categories.category_type may have already been dropped, ignore error
-    }
+        } catch (err) {
+          // categories.category_type may have already been dropped, ignore error
+        }
 
-    // Migration: Drop category_type from categories table
-    try {
-      await activePool.query(`ALTER TABLE categories DROP COLUMN category_type;`);
-    } catch (err) {
-      // Column may already have been dropped, ignore error
-    }
+        // Migration: Drop category_type from categories table
+        try {
+          await activePool.query(`ALTER TABLE categories DROP COLUMN category_type;`);
+        } catch (err) {
+          // Column may already have been dropped, ignore error
+        }
 
-    // Migration: Add sort_order column to categories table if missing
-    try {
-      await activePool.query(`ALTER TABLE categories ADD COLUMN sort_order INT NULL DEFAULT NULL;`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration: Add sort_order column to categories table if missing
+        try {
+          await activePool.query(`ALTER TABLE categories ADD COLUMN sort_order INT NULL DEFAULT NULL;`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`CREATE INDEX idx_sort_order ON categories (sort_order);`);
-    } catch (err) {
-      // Index may already exist, ignore error
-    }
+        try {
+          await activePool.query(`CREATE INDEX idx_sort_order ON categories (sort_order);`);
+        } catch (err) {
+          // Index may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE subcategories ADD COLUMN stock INT NULL DEFAULT NULL;`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE subcategories ADD COLUMN stock INT NULL DEFAULT NULL;`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE subcategories ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE subcategories ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    // Ensure subcategory_images table exists
-    const createSubCategoryImagesTableQuery = `
+        // Ensure subcategory_images table exists
+        const createSubCategoryImagesTableQuery = `
       CREATE TABLE IF NOT EXISTS subcategory_images (
           id INT AUTO_INCREMENT PRIMARY KEY,
           subcategory_id INT NOT NULL,
@@ -175,60 +198,60 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createSubCategoryImagesTableQuery);
+        await activePool.query(createSubCategoryImagesTableQuery);
 
-    // Migration logic: populate subcategory_images from subcategories table if subcategory_images is empty
-    try {
-      const [imgRows] = await activePool.query<any[]>('SELECT COUNT(*) as count FROM subcategory_images');
-      if (imgRows && imgRows[0] && imgRows[0].count === 0) {
-        // Attempt to select image and images columns if they still exist in subcategories
+        // Migration logic: populate subcategory_images from subcategories table if subcategory_images is empty
         try {
-          const [subs] = await activePool.query<any[]>('SELECT id, image, images FROM subcategories');
-          if (Array.isArray(subs)) {
-            for (const sub of subs) {
-              let urls: string[] = [];
-              if (sub.images) {
-                try {
-                  const parsed = JSON.parse(sub.images);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    urls = parsed;
+          const [imgRows] = await activePool.query<any[]>('SELECT COUNT(*) as count FROM subcategory_images');
+          if (imgRows && imgRows[0] && imgRows[0].count === 0) {
+            // Attempt to select image and images columns if they still exist in subcategories
+            try {
+              const [subs] = await activePool.query<any[]>('SELECT id, image, images FROM subcategories');
+              if (Array.isArray(subs)) {
+                for (const sub of subs) {
+                  let urls: string[] = [];
+                  if (sub.images) {
+                    try {
+                      const parsed = JSON.parse(sub.images);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        urls = parsed;
+                      }
+                    } catch (e) { }
                   }
-                } catch (e) { }
+                  if (urls.length === 0 && sub.image) {
+                    urls = [sub.image];
+                  }
+                  for (let i = 0; i < urls.length; i++) {
+                    await activePool.query(
+                      'INSERT INTO subcategory_images (subcategory_id, image_url, is_primary) VALUES (?, ?, ?)',
+                      [sub.id, urls[i], i === 0 ? 1 : 0]
+                    );
+                  }
+                }
               }
-              if (urls.length === 0 && sub.image) {
-                urls = [sub.image];
-              }
-              for (let i = 0; i < urls.length; i++) {
-                await activePool.query(
-                  'INSERT INTO subcategory_images (subcategory_id, image_url, is_primary) VALUES (?, ?, ?)',
-                  [sub.id, urls[i], i === 0 ? 1 : 0]
-                );
-              }
+            } catch (subErr) {
+              // Columns image or images may already be dropped
             }
           }
-        } catch (subErr) {
-          // Columns image or images may already be dropped
+        } catch (err) {
+          console.error('Error migrating subcategory_images:', err);
         }
-      }
-    } catch (err) {
-      console.error('Error migrating subcategory_images:', err);
-    }
 
-    // Safely drop deprecated image and images columns from subcategories table
-    try {
-      await activePool.query(`ALTER TABLE subcategories DROP COLUMN images;`);
-    } catch (err) {
-      // Column may already be dropped, ignore error
-    }
+        // Safely drop deprecated image and images columns from subcategories table
+        try {
+          await activePool.query(`ALTER TABLE subcategories DROP COLUMN images;`);
+        } catch (err) {
+          // Column may already be dropped, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE subcategories DROP COLUMN image;`);
-    } catch (err) {
-      // Column may already be dropped, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE subcategories DROP COLUMN image;`);
+        } catch (err) {
+          // Column may already be dropped, ignore error
+        }
 
-    // Ensure cms_pages table exists
-    const createCmsPagesTableQuery = `
+        // Ensure cms_pages table exists
+        const createCmsPagesTableQuery = `
       CREATE TABLE IF NOT EXISTS cms_pages (
           id INT AUTO_INCREMENT PRIMARY KEY,
           page_name VARCHAR(150) NOT NULL,
@@ -244,10 +267,10 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createCmsPagesTableQuery);
+        await activePool.query(createCmsPagesTableQuery);
 
-    // Ensure users table exists
-    const createUsersTableQuery = `
+        // Ensure users table exists
+        const createUsersTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
           id INT AUTO_INCREMENT PRIMARY KEY,
           fullName VARCHAR(255) NOT NULL,
@@ -262,34 +285,34 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createUsersTableQuery);
+        await activePool.query(createUsersTableQuery);
 
-    // Migration for existing tables without phoneNumber or profileImage column
-    try {
-      await activePool.query(`ALTER TABLE users ADD COLUMN phoneNumber VARCHAR(50) NOT NULL DEFAULT '';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration for existing tables without phoneNumber or profileImage column
+        try {
+          await activePool.query(`ALTER TABLE users ADD COLUMN phoneNumber VARCHAR(50) NOT NULL DEFAULT '';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE users ADD COLUMN profileImage VARCHAR(500) NULL DEFAULT '';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE users ADD COLUMN profileImage VARCHAR(500) NULL DEFAULT '';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    // Migration for existing tables to add or modify confirmationCode to VARCHAR(10) NULL
-    try {
-      await activePool.query(`ALTER TABLE users ADD COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
-    } catch (err) {
-      try {
-        await activePool.query(`ALTER TABLE users MODIFY COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
-      } catch (modifyErr) {
-        // Column may already exist and nullable
-      }
-    }
+        // Migration for existing tables to add or modify confirmationCode to VARCHAR(10) NULL
+        try {
+          await activePool.query(`ALTER TABLE users ADD COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
+        } catch (err) {
+          try {
+            await activePool.query(`ALTER TABLE users MODIFY COLUMN confirmationCode VARCHAR(10) NULL DEFAULT NULL;`);
+          } catch (modifyErr) {
+            // Column may already exist and nullable
+          }
+        }
 
-    // Ensure UserLogin table exists
-    const createUserLoginTableQuery = `
+        // Ensure UserLogin table exists
+        const createUserLoginTableQuery = `
       CREATE TABLE IF NOT EXISTS userLogin (
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
@@ -303,17 +326,17 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createUserLoginTableQuery);
+        await activePool.query(createUserLoginTableQuery);
 
-    // Migration for existing userLogin table without fcmToken column
-    try {
-      await activePool.query(`ALTER TABLE userLogin ADD COLUMN fcmToken TEXT NULL;`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration for existing userLogin table without fcmToken column
+        try {
+          await activePool.query(`ALTER TABLE userLogin ADD COLUMN fcmToken TEXT NULL;`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    // Ensure cart table exists
-    const createCartTableQuery = `
+        // Ensure cart table exists
+        const createCartTableQuery = `
       CREATE TABLE IF NOT EXISTS cart (
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
@@ -333,17 +356,17 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createCartTableQuery);
+        await activePool.query(createCartTableQuery);
 
-    // Migration for existing cart table to modify quantity column type to FLOAT
-    try {
-      await activePool.query(`ALTER TABLE cart MODIFY COLUMN quantity FLOAT NOT NULL DEFAULT 1;`);
-    } catch (err) {
-      // Column may already be FLOAT, ignore error
-    }
+        // Migration for existing cart table to modify quantity column type to FLOAT
+        try {
+          await activePool.query(`ALTER TABLE cart MODIFY COLUMN quantity FLOAT NOT NULL DEFAULT 1;`);
+        } catch (err) {
+          // Column may already be FLOAT, ignore error
+        }
 
-    // Ensure user_addresses table exists
-    const createUserAddressesTableQuery = `
+        // Ensure user_addresses table exists
+        const createUserAddressesTableQuery = `
       CREATE TABLE IF NOT EXISTS user_addresses (
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
@@ -365,29 +388,29 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createUserAddressesTableQuery);
+        await activePool.query(createUserAddressesTableQuery);
 
-    // Migration for existing user_addresses table
-    try {
-      await activePool.query(`ALTER TABLE user_addresses ADD COLUMN state VARCHAR(100) NULL DEFAULT '';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration for existing user_addresses table
+        try {
+          await activePool.query(`ALTER TABLE user_addresses ADD COLUMN state VARCHAR(100) NULL DEFAULT '';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE user_addresses ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE user_addresses ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE user_addresses DROP COLUMN landmark;`);
-    } catch (err) {
-      // Ignore if unable to modify enum
-    }
+        try {
+          await activePool.query(`ALTER TABLE user_addresses DROP COLUMN landmark;`);
+        } catch (err) {
+          // Ignore if unable to modify enum
+        }
 
-    // Ensure payment methods are persisted rather than hard-coded by checkout APIs.
-    const createPaymentMethodTableQuery = `
+        // Ensure payment methods are persisted rather than hard-coded by checkout APIs.
+        const createPaymentMethodTableQuery = `
       CREATE TABLE IF NOT EXISTS PaymentMethod (
           id INT AUTO_INCREMENT PRIMARY KEY,
           paymentType VARCHAR(100) NOT NULL,
@@ -398,22 +421,22 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createPaymentMethodTableQuery);
+        await activePool.query(createPaymentMethodTableQuery);
 
-    // Seed COD once. The unique payment type also protects against duplicate data
-    // when more than one process initializes the database at the same time.
-    await activePool.query(
-      `INSERT INTO PaymentMethod (paymentType, description)
+        // Seed COD once. The unique payment type also protects against duplicate data
+        // when more than one process initializes the database at the same time.
+        await activePool.query(
+          `INSERT INTO PaymentMethod (paymentType, description)
        VALUES (?, ?)
        ON DUPLICATE KEY UPDATE paymentType = VALUES(paymentType)`,
-      [
-        'COD',
-        "Pay when your fresh produce arrives at your door. We accept exact cash or card via our driver's terminal.",
-      ]
-    );
+          [
+            'COD',
+            "Pay when your fresh produce arrives at your door. We accept exact cash or card via our driver's terminal.",
+          ]
+        );
 
-    // Ensure app_settings table exists
-    const createAppSettingsTableQuery = `
+        // Ensure app_settings table exists
+        const createAppSettingsTableQuery = `
       CREATE TABLE IF NOT EXISTS app_settings (
           id INT AUTO_INCREMENT PRIMARY KEY,
           email VARCHAR(255) NOT NULL DEFAULT '',
@@ -426,49 +449,49 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createAppSettingsTableQuery);
+        await activePool.query(createAppSettingsTableQuery);
 
-    // Migration for app_settings tables created before delivery_fee was added.
-    try {
-      await activePool.query(
-        'ALTER TABLE app_settings ADD COLUMN delivery_fee DECIMAL(10,2) NULL DEFAULT NULL;'
-      );
-    } catch {
-      // The column already exists on newer installations.
-    }
+        // Migration for app_settings tables created before delivery_fee was added.
+        try {
+          await activePool.query(
+            'ALTER TABLE app_settings ADD COLUMN delivery_fee DECIMAL(10,2) NULL DEFAULT NULL;'
+          );
+        } catch {
+          // The column already exists on newer installations.
+        }
 
-    // Migration for app_settings tables created before maintenance notification fields were added.
-    try {
-      await activePool.query(
-        'ALTER TABLE app_settings ADD COLUMN maintenance_notification_title VARCHAR(255) NULL DEFAULT NULL;'
-      );
-    } catch {
-      // The column already exists on newer installations.
-    }
+        // Migration for app_settings tables created before maintenance notification fields were added.
+        try {
+          await activePool.query(
+            'ALTER TABLE app_settings ADD COLUMN maintenance_notification_title VARCHAR(255) NULL DEFAULT NULL;'
+          );
+        } catch {
+          // The column already exists on newer installations.
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE app_settings ADD COLUMN maintenance_notification_description TEXT NULL DEFAULT NULL;'
-      );
-    } catch {
-      // The column already exists on newer installations.
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE app_settings ADD COLUMN maintenance_notification_description TEXT NULL DEFAULT NULL;'
+          );
+        } catch {
+          // The column already exists on newer installations.
+        }
 
-    // Seed default initial app_settings if empty
-    try {
-      const [settingRows] = await activePool.query<mysql.RowDataPacket[]>('SELECT COUNT(*) as count FROM app_settings');
-      if (settingRows && settingRows[0] && settingRows[0].count === 0) {
-        await activePool.query(
-          'INSERT INTO app_settings (email, phone_number) VALUES (?, ?)',
-          ['info@gracefreshmarket.com', '+1 (800) 555-0199']
-        );
-      }
-    } catch (err) {
-      console.error('Error seeding app_settings:', err);
-    }
+        // Seed default initial app_settings if empty
+        try {
+          const [settingRows] = await activePool.query<mysql.RowDataPacket[]>('SELECT COUNT(*) as count FROM app_settings');
+          if (settingRows && settingRows[0] && settingRows[0].count === 0) {
+            await activePool.query(
+              'INSERT INTO app_settings (email, phone_number) VALUES (?, ?)',
+              ['info@gracefreshmarket.com', '+1 (800) 555-0199']
+            );
+          }
+        } catch (err) {
+          console.error('Error seeding app_settings:', err);
+        }
 
-    // Ensure Order table exists (reserved MySQL keyword — always quote with backticks)
-    const createOrderTableQuery = `
+        // Ensure Order table exists (reserved MySQL keyword — always quote with backticks)
+        const createOrderTableQuery = `
       CREATE TABLE IF NOT EXISTS \`Order\` (
           id INT AUTO_INCREMENT PRIMARY KEY,
           userId INT NOT NULL,
@@ -495,15 +518,15 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createOrderTableQuery);
+        await execWithRetry(activePool, createOrderTableQuery);
 
-    try {
-      await activePool.query(`ALTER TABLE \`Order\` ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE \`Order\` ADD COLUMN phone_number VARCHAR(50) NULL DEFAULT '';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    const createOrderItemsTableQuery = `
+        const createOrderItemsTableQuery = `
       CREATE TABLE IF NOT EXISTS OrderItems (
           id INT AUTO_INCREMENT PRIMARY KEY,
           orderId INT NOT NULL,
@@ -528,34 +551,34 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createOrderItemsTableQuery);
+        await execWithRetry(activePool, createOrderItemsTableQuery);
 
-    // Migration: Update OrderItems to use subCategoryType
-    try {
-      await activePool.query(`ALTER TABLE OrderItems ADD COLUMN subCategoryType VARCHAR(50) NOT NULL DEFAULT 'gram';`);
-    } catch (err) {
-      // Column may already exist, ignore error
-    }
+        // Migration: Update OrderItems to use subCategoryType
+        try {
+          await activePool.query(`ALTER TABLE OrderItems ADD COLUMN subCategoryType VARCHAR(50) NOT NULL DEFAULT 'gram';`);
+        } catch (err) {
+          // Column may already exist, ignore error
+        }
 
-    try {
-      await activePool.query(`UPDATE OrderItems SET subCategoryType = categoryType WHERE (subCategoryType IS NULL OR subCategoryType = '' OR subCategoryType = 'gram') AND categoryType IS NOT NULL AND categoryType != '';`);
-    } catch (err) {
-      // categoryType column may not exist, ignore error
-    }
+        try {
+          await activePool.query(`UPDATE OrderItems SET subCategoryType = categoryType WHERE (subCategoryType IS NULL OR subCategoryType = '' OR subCategoryType = 'gram') AND categoryType IS NOT NULL AND categoryType != '';`);
+        } catch (err) {
+          // categoryType column may not exist, ignore error
+        }
 
-    try {
-      await activePool.query(`ALTER TABLE OrderItems DROP COLUMN categoryType;`);
-    } catch (err) {
-      // Column may already have been dropped, ignore error
-    }
+        try {
+          await activePool.query(`ALTER TABLE OrderItems DROP COLUMN categoryType;`);
+        } catch (err) {
+          // Column may already have been dropped, ignore error
+        }
 
-    try {
-      await activePool.query('RENAME TABLE orderStatus TO OrderStatus;');
-    } catch {
-      // Table may already be named OrderStatus, or may not exist yet.
-    }
+        try {
+          await activePool.query('RENAME TABLE orderStatus TO OrderStatus;');
+        } catch {
+          // Table may already be named OrderStatus, or may not exist yet.
+        }
 
-    const createOrderStatusTableQuery = `
+        const createOrderStatusTableQuery = `
       CREATE TABLE IF NOT EXISTS OrderStatus (
           id INT AUTO_INCREMENT PRIMARY KEY,
           orderId INT NOT NULL,
@@ -569,9 +592,9 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createOrderStatusTableQuery);
+        await execWithRetry(activePool, createOrderStatusTableQuery);
 
-    const createNotificationTableQuery = `
+        const createNotificationTableQuery = `
       CREATE TABLE IF NOT EXISTS Notification (
           id INT AUTO_INCREMENT PRIMARY KEY,
           userId INT NULL,
@@ -596,151 +619,185 @@ export async function initShopDb(): Promise<void> {
       );
     `;
 
-    await activePool.query(createNotificationTableQuery);
+        await execWithRetry(activePool, createNotificationTableQuery);
 
-    try {
-      await activePool.query(
-        'ALTER TABLE Notification ADD COLUMN isRead BOOLEAN NOT NULL DEFAULT FALSE;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE Notification ADD COLUMN isRead BOOLEAN NOT NULL DEFAULT FALSE;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query('ALTER TABLE `Order` DROP COLUMN grandTotal;');
-    } catch {
-      // Column may not exist or already dropped
-    }
+        try {
+          await activePool.query('ALTER TABLE `Order` DROP COLUMN grandTotal;');
+        } catch {
+          // Column may not exist or already dropped
+        }
 
-    // Ensure OrderItems supports pricing history snapshot (amount, offer, discountAmount, finalAmount)
-    try {
-      await activePool.query('ALTER TABLE OrderItems ADD COLUMN amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
-    } catch {
-      // Column may already exist
-    }
+        // Ensure OrderItems supports pricing history snapshot (amount, offer, discountAmount, finalAmount)
+        try {
+          await activePool.query('ALTER TABLE OrderItems ADD COLUMN amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query('ALTER TABLE OrderItems ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;');
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query('ALTER TABLE OrderItems ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;');
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query('ALTER TABLE OrderItems ADD COLUMN discountAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query('ALTER TABLE OrderItems ADD COLUMN discountAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query('ALTER TABLE OrderItems ADD COLUMN finalAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query('ALTER TABLE OrderItems ADD COLUMN finalAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00;');
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(`
+        try {
+          await activePool.query(`
         UPDATE OrderItems
         SET finalAmount = price,
             amount = CASE WHEN amount = 0.00 THEN price ELSE amount END
         WHERE (finalAmount = 0.00 OR amount = 0.00) AND price > 0;
       `);
-    } catch {
-      // Ignore if update fails or already updated
-    }
+        } catch {
+          // Ignore if update fails or already updated
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE \`Order\` ADD COLUMN total DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE \`Order\` ADD COLUMN total DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderItems ADD COLUMN price DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderItems ADD COLUMN price DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderItems ADD COLUMN itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderItems ADD COLUMN itemTotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderItems ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderItems ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderItems ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderItems ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderStatus ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderStatus ADD COLUMN createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        'ALTER TABLE OrderStatus ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            'ALTER TABLE OrderStatus ADD COLUMN updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;'
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    try {
-      await activePool.query(
-        "ALTER TABLE OrderStatus MODIFY COLUMN status ENUM('ordered', 'packed', 'out for delivery', 'delivered', 'cancelled') NOT NULL DEFAULT 'ordered';"
-      );
-    } catch {
-      // Column may already exist
-    }
+        try {
+          await activePool.query(
+            "ALTER TABLE OrderStatus MODIFY COLUMN status ENUM('ordered', 'packed', 'out for delivery', 'delivered', 'cancelled') NOT NULL DEFAULT 'ordered';"
+          );
+        } catch {
+          // Column may already exist
+        }
 
-    // Compatibility views for legacy raw queries referencing 'orders' and 'order_items'
-    try {
-      await activePool.query('CREATE OR REPLACE VIEW orders AS SELECT * FROM `Order`;');
-    } catch {
-      // View creation may fail if restricted DB permissions
-    }
+        // Compatibility views for legacy raw queries referencing 'orders' and 'order_items'
+        try {
+          await activePool.query('CREATE OR REPLACE VIEW orders AS SELECT * FROM `Order`;');
+        } catch {
+          // View creation may fail if restricted DB permissions
+        }
 
-    try {
-      await activePool.query('CREATE OR REPLACE VIEW order_items AS SELECT * FROM OrderItems;');
-    } catch {
-      // View creation may fail if restricted DB permissions
-    }
+        try {
+          await activePool.query('CREATE OR REPLACE VIEW order_items AS SELECT * FROM OrderItems;');
+        } catch {
+          // View creation may fail if restricted DB permissions
+        }
 
-    try {
-      await activePool.query('CREATE OR REPLACE VIEW notifications AS SELECT * FROM Notification;');
-    } catch {
-      // View creation may fail if restricted DB permissions
-    }
+        try {
+          await activePool.query('CREATE OR REPLACE VIEW notifications AS SELECT * FROM Notification;');
+        } catch {
+          // View creation may fail if restricted DB permissions
+        }
+      }
 
-    initialized = true;
-  } catch (error) {
-    console.error('Failed to initialize shop database:', error);
-    throw error;
-  }
-}
+      async function runInitWithRetry(maxRetries = 3): Promise<void> {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            await performDbInitialization();
+            return;
+          } catch (error: any) {
+            const isDeadlock =
+              error?.code === 'ER_LOCK_DEADLOCK' ||
+              error?.errno === 1213 ||
+              error?.code === 'ER_LOCK_WAIT_TIMEOUT';
 
-export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
-  await initShopDb();
-  const activePool = getPool();
-  const [rows] = await activePool.query(sql, params);
-  return rows as T;
-}
+            if (isDeadlock && attempt < maxRetries) {
+              console.warn(
+                `[initShopDb] Deadlock detected during database initialization (attempt ${attempt}/${maxRetries}). Retrying in ${300 * attempt}ms...`
+              );
+              await new Promise((res) => setTimeout(res, 300 * attempt));
+              continue;
+            }
+            throw error;
+          }
+        }
+      }
+
+      export async function initShopDb(): Promise<void> {
+        if (globalForDb.__shop_db_initialized) return;
+        if (globalForDb.__shop_db_init_promise) return globalForDb.__shop_db_init_promise;
+
+        globalForDb.__shop_db_init_promise = runInitWithRetry()
+          .then(() => {
+            globalForDb.__shop_db_initialized = true;
+          })
+          .catch((error) => {
+            globalForDb.__shop_db_init_promise = null;
+            console.error('Failed to initialize shop database:', error);
+            throw error;
+          });
+
+        return globalForDb.__shop_db_init_promise;
+      }
+
+      export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
+        await initShopDb();
+        const activePool = getPool();
+        const [rows] = await activePool.query(sql, params);
+        return rows as T;
+      }
