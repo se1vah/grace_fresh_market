@@ -72,11 +72,13 @@ export async function initShopDb(): Promise<void> {
           category_name VARCHAR(255) NOT NULL,
           image VARCHAR(500) NOT NULL,
           status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+          sort_order INT NULL DEFAULT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
               ON UPDATE CURRENT_TIMESTAMP,
           INDEX idx_category_name (category_name),
-          INDEX idx_status (status)
+          INDEX idx_status (status),
+          INDEX idx_sort_order (sort_order)
       );
     `;
 
@@ -131,6 +133,19 @@ export async function initShopDb(): Promise<void> {
       await activePool.query(`ALTER TABLE categories DROP COLUMN category_type;`);
     } catch (err) {
       // Column may already have been dropped, ignore error
+    }
+
+    // Migration: Add sort_order column to categories table if missing
+    try {
+      await activePool.query(`ALTER TABLE categories ADD COLUMN sort_order INT NULL DEFAULT NULL;`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`CREATE INDEX idx_sort_order ON categories (sort_order);`);
+    } catch (err) {
+      // Index may already exist, ignore error
     }
 
     try {

@@ -27,11 +27,13 @@ CREATE TABLE `categories` (
   `category_name` varchar(255) NOT NULL,
   `image` varchar(500) NOT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `sort_order` int DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_category_name` (`category_name`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_sort_order` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

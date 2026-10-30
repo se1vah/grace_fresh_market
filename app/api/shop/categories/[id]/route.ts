@@ -48,6 +48,23 @@ export async function PUT(
     const status = (formData.get('status') as string || existingCategory.status).toLowerCase();
     const imageFile = formData.get('image') as File | string | null;
 
+    let sortOrder: number | null = existingCategory.sort_order ?? null;
+    if (formData.has('sort_order')) {
+      const rawSortOrder = formData.get('sort_order');
+      if (rawSortOrder === null || rawSortOrder === undefined || String(rawSortOrder).trim() === '') {
+        sortOrder = null;
+      } else {
+        const trimmed = String(rawSortOrder).trim();
+        if (!/^\d+$/.test(trimmed)) {
+          return NextResponse.json(
+            { error: 'Sort order must be a valid whole number (0, 1, 2, ...)' },
+            { status: 400 }
+          );
+        }
+        sortOrder = parseInt(trimmed, 10);
+      }
+    }
+
     if (!categoryName) {
       return NextResponse.json({ error: 'Category name is required' }, { status: 400 });
     }
@@ -122,8 +139,8 @@ export async function PUT(
     }
 
     await query(
-      'UPDATE categories SET category_name = ?, image = ?, status = ? WHERE id = ?',
-      [categoryName, finalImagePath, status, categoryId]
+      'UPDATE categories SET category_name = ?, image = ?, status = ?, sort_order = ? WHERE id = ?',
+      [categoryName, finalImagePath, status, sortOrder, categoryId]
     );
 
     return NextResponse.json({
@@ -134,6 +151,7 @@ export async function PUT(
         category_name: categoryName,
         image: finalImagePath,
         status,
+        sort_order: sortOrder,
       },
     });
   } catch (error: any) {

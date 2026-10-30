@@ -40,6 +40,7 @@ Accept: application/json
       "category_name": "Fresh Vegetables",
       "image": "/images/category/fresh-vegetables-1787510000000.jpg",
       "status": "active",
+      "sort_order": 1,
       "created_at": "2026-08-23T18:00:00.000Z",
       "updated_at": "2026-08-23T18:00:00.000Z"
     },
@@ -48,6 +49,7 @@ Accept: application/json
       "category_name": "Fresh Fruits",
       "image": "/images/category/fresh-fruits-1787510000000.jpg",
       "status": "active",
+      "sort_order": null,
       "created_at": "2026-08-23T18:05:00.000Z",
       "updated_at": "2026-08-23T18:05:00.000Z"
     }
@@ -71,6 +73,7 @@ Accept: application/json
 | `data[].category_name` | `string` | Name of the category. |
 | `data[].image` | `string` | Public relative URL of the category image asset. |
 | `data[].status` | `string` | Status of the category (`"active"` or `"inactive"`). |
+| `data[].sort_order` | `number \| null` | Whole number sort priority (`0`, `1`, `2`, ...). Non-null values are sorted ascending; null values fallback to default sort (`id DESC`). |
 | `data[].created_at` | `string` | ISO 8601 timestamp when category was created. |
 | `data[].updated_at` | `string` | ISO 8601 timestamp when category was last updated. |
 | `pagination.page` | `number` | Current page number. |
@@ -80,15 +83,45 @@ Accept: application/json
 
 ---
 
+## POST `/api/shop/categories`
+
+Creates a new category with an optional sort order number.
+
+### Request Details
+- **HTTP Method**: `POST`
+- **URL Path**: `/api/shop/categories`
+- **Content-Type**: `multipart/form-data`
+- **Authentication**: Admin JWT Token (Cookie: `shop_token`)
+
+### Form Data Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `category_name` | `string` | Yes | Name of the category. |
+| `image` | `file` | Yes | Image file asset (JPG, JPEG, PNG, WEBP, max 5MB). |
+| `status` | `string` | No | `"active"` or `"inactive"` (default: `"active"`). |
+| `sort_order` | `string` / `number` | No | Optional whole number (e.g. `1`, `2`, `3`). If empty or null, defaults to `null` and takes default sort. |
+
+---
+
 ## PUT `/api/shop/categories/:id`
 
-Updates category information, image, and status.
+Updates category information, image, status, and sort order.
 
 ### Request Details
 - **HTTP Method**: `PUT`
 - **URL Path**: `/api/shop/categories/:id`
 - **Content-Type**: `multipart/form-data`
 - **Authentication**: Admin JWT Token (Cookie: `shop_token`)
+
+### Form Data Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `category_name` | `string` | No | Updated category name. |
+| `image` | `file` | No | Updated image file asset (optional). |
+| `status` | `string` | No | `"active"` or `"inactive"`. |
+| `sort_order` | `string` / `number` | No | Optional whole number. Send empty string to clear to `null`. |
 
 ### Validation Rules
 - **Inactive State Restriction**: When setting `status` to `"inactive"`, the request is rejected with `400 Bad Request` if:

@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { 
-  Edit3, 
-  Trash2, 
-  ImageIcon, 
-  FolderPlus, 
-  SearchX, 
-  AlertCircle, 
+import {
+  Edit3,
+  Trash2,
+  ImageIcon,
+  FolderPlus,
+  SearchX,
+  AlertCircle,
   RefreshCw,
   Plus
 } from 'lucide-react';
@@ -68,6 +68,7 @@ export default function CategoryTable({
                 <tr className="bg-[#F9FBF9] border-b border-[#E2EAE1]">
                   <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">ID</th>
                   <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">Category Name</th>
+                  <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">Sort Order</th>
                   <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">Image</th>
                   <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">Status</th>
                   <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 text-right">Action</th>
@@ -81,6 +82,9 @@ export default function CategoryTable({
                     </td>
                     <td className="px-6 py-4">
                       <div className="h-4 w-32 bg-gray-200 rounded" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 w-12 bg-gray-200 rounded" />
                     </td>
                     <td className="px-6 py-4">
                       <div className="h-10 w-10 bg-gray-200 rounded-lg" />
@@ -104,6 +108,7 @@ export default function CategoryTable({
             <div key={i} className="bg-white rounded-2xl border border-[#E2EAE1] p-4 space-y-3 shadow-xs animate-pulse">
               <div className="flex justify-between"><div className="h-3 w-12 bg-gray-200 rounded" /><div className="h-3 w-10 bg-gray-200 rounded" /></div>
               <div className="flex justify-between"><div className="h-3 w-24 bg-gray-200 rounded" /><div className="h-4 w-32 bg-gray-200 rounded" /></div>
+              <div className="flex justify-between"><div className="h-3 w-20 bg-gray-200 rounded" /><div className="h-4 w-12 bg-gray-200 rounded" /></div>
               <div className="flex justify-between items-center"><div className="h-3 w-16 bg-gray-200 rounded" /><div className="h-10 w-10 bg-gray-200 rounded-xl" /></div>
               <div className="flex justify-between"><div className="h-3 w-16 bg-gray-200 rounded" /><div className="h-5 w-16 bg-gray-200 rounded-full" /></div>
               <div className="pt-2 flex justify-between"><div className="h-3 w-16 bg-gray-200 rounded" /><div className="h-7 w-28 bg-gray-200 rounded-xl" /></div>
@@ -170,6 +175,9 @@ export default function CategoryTable({
                   Category Name
                 </th>
                 <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                  Sort Order
+                </th>
+                <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
                   Image
                 </th>
                 <th className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
@@ -182,8 +190,8 @@ export default function CategoryTable({
             </thead>
             <tbody className="divide-y divide-[#E2EAE1]">
               {categories.map((cat) => (
-                <tr 
-                  key={cat.id} 
+                <tr
+                  key={cat.id}
                   className="hover:bg-[#F9FBF9] transition-colors group"
                 >
                   {/* ID */}
@@ -196,6 +204,17 @@ export default function CategoryTable({
                     <span className="font-quicksand font-bold text-gray-900 text-sm group-hover:text-[#2D5A27] transition">
                       {cat.category_name}
                     </span>
+                  </td>
+
+                  {/* Sort Order */}
+                  <td className="px-6 py-4">
+                    {cat.sort_order !== null && cat.sort_order !== undefined ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono bg-[#EAF2EA] text-[#2D5A27] border border-[#d2e3d2]">
+                        #{cat.sort_order}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs font-nunito italic">Default</span>
+                    )}
                   </td>
 
                   {/* Image */}
@@ -279,6 +298,20 @@ export default function CategoryTable({
               <span className="font-quicksand font-bold text-gray-900 text-sm">
                 {cat.category_name}
               </span>
+            </div>
+
+            {/* Field: Sort Order */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-gray-400 uppercase tracking-wider font-quicksand">
+                Sort Order
+              </span>
+              {cat.sort_order !== null && cat.sort_order !== undefined ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold font-mono bg-[#EAF2EA] text-[#2D5A27] border border-[#d2e3d2]">
+                  #{cat.sort_order}
+                </span>
+              ) : (
+                <span className="text-gray-400 text-xs font-nunito italic">Default</span>
+              )}
             </div>
 
             {/* Field: Image */}

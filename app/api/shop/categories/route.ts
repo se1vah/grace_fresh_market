@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
     // Fetch category items
     const rawRows = await query<any[]>(
       search
-        ? `SELECT id, category_name, image, status, created_at, updated_at FROM categories WHERE category_name LIKE ? ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
-        : `SELECT id, category_name, image, status, created_at, updated_at FROM categories ORDER BY id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
-      search ? [searchPattern] : []
+        ? `SELECT id, category_name, image, status, sort_order, created_at, updated_at FROM categories WHERE category_name LIKE ? ORDER BY CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END ASC, sort_order ASC, id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`
+      : `SELECT id, category_name, image, status, sort_order, created_at, updated_at FROM categories ORDER BY CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END ASC, sort_order ASC, id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+      search ?[searchPattern]: []
     );
 
     return NextResponse.json({
@@ -86,6 +86,19 @@ export async function POST(request: NextRequest) {
     const categoryName = (formData.get('category_name') as string || '').trim();
     const status = (formData.get('status') as string || 'active').toLowerCase();
     const imageFile = formData.get('image') as File | null;
+    const rawSortOrder = formData.get('sort_order');
+
+    let sortOrder: number | null = null;
+    if (rawSortOrder !== null && rawSortOrder !== undefined && String(rawSortOrder).trim() !== '') {
+      const trimmed = String(rawSortOrder).trim();
+      if (!/^\d+$/.test(trimmed)) {
+        return NextResponse.json(
+          { error: 'Sort order must be a valid whole number (0, 1, 2, ...)' },
+          { status: 400 }
+        );
+      }
+      sortOrder = parseInt(trimmed, 10);
+    }
 
     if (!categoryName) {
       return NextResponse.json(
@@ -136,8 +149,8 @@ export async function POST(request: NextRequest) {
     const publicImagePath = blob.url;
 
     const insertResult = await query<any>(
-      'INSERT INTO categories (category_name, image, status) VALUES (?, ?, ?)',
-      [categoryName, publicImagePath, status]
+      'INSERT INTO categories (category_name, image, status, sort_order) VALUES (?, ?, ?, ?)',
+      [categoryName, publicImagePath, status, sortOrder]
     );
 
     return NextResponse.json({
@@ -148,6 +161,7 @@ export async function POST(request: NextRequest) {
         category_name: categoryName,
         image: publicImagePath,
         status,
+        sort_order: sortOrder,
       },
     });
   } catch (error: any) {

@@ -18,6 +18,7 @@ export interface CategoryData {
   category_name: string;
   image: string;
   status: 'active' | 'inactive';
+  sort_order?: number | null;
 }
 
 interface CategoryModalProps {
@@ -50,6 +51,7 @@ export default function CategoryModal({
   categoryToEdit,
 }: CategoryModalProps) {
   const [categoryName, setCategoryName] = useState('');
+  const [sortOrder, setSortOrder] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -87,11 +89,17 @@ export default function CategoryModal({
     if (isOpen) {
       if (categoryToEdit) {
         setCategoryName(categoryToEdit.category_name || '');
+        setSortOrder(
+          categoryToEdit.sort_order !== null && categoryToEdit.sort_order !== undefined
+            ? String(categoryToEdit.sort_order)
+            : ''
+        );
         setStatus(categoryToEdit.status || 'active');
         setPreviewUrl(categoryToEdit.image || null);
         setSelectedFile(null);
       } else {
         setCategoryName('');
+        setSortOrder('');
         setStatus('active');
         setPreviewUrl(null);
         setSelectedFile(null);
@@ -148,7 +156,15 @@ export default function CategoryModal({
     if (!categoryName.trim()) {
       newErrors.categoryName = 'Category name is required.';
     }
-    // 2. Image validation
+
+    // 2. Sort Order validation (whole number when provided)
+    if (sortOrder.trim() !== '') {
+      if (!/^\d+$/.test(sortOrder.trim())) {
+        newErrors.sortOrder = 'Sort order must be a valid whole number (0, 1, 2, ...).';
+      }
+    }
+
+    // 3. Image validation
     if (!selectedFile && !isEditMode) {
       newErrors.image = 'Category image is required.';
     }
@@ -172,6 +188,7 @@ export default function CategoryModal({
       const formData = new FormData();
       formData.append('category_name', categoryName.trim());
       formData.append('status', status);
+      formData.append('sort_order', sortOrder.trim());
 
       if (selectedFile) {
         formData.append('image', selectedFile);
@@ -269,6 +286,47 @@ export default function CategoryModal({
                   }`}
               />
               <ModernFieldError message={errors.categoryName} />
+            </div>
+
+            {/* Sort Order Input (Whole Number) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 font-quicksand">
+                  Sort Order <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                </label>
+                <span className="text-[11px] text-gray-400 font-nunito">
+                  Lower numbers appear first
+                </span>
+              </div>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={sortOrder}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Allow empty or whole numbers only
+                  if (val === '' || /^\d+$/.test(val)) {
+                    setSortOrder(val);
+                  }
+                  setErrors((prev) => ({ ...prev, sortOrder: '' }));
+                }}
+                onKeyDown={(e) => {
+                  // Prevent entering '-', '.', 'e', 'E', '+'
+                  if (['-', '.', 'e', 'E', '+'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="e.g. 1, 2, 3 (leave empty for default sort)"
+                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.sortOrder
+                  ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                  : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                  }`}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Used to determine category display order. Leave blank for default sorting.
+              </p>
+              <ModernFieldError message={errors.sortOrder} />
             </div>
 
             {/* Category Image Upload & Preview */}
